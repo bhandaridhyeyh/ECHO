@@ -1,3 +1,6 @@
+package.json 
+package-lock.json 
+
 # OSX
 #
 .DS_Store
@@ -33,7 +36,7 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
-
+gradleW
 # node.js
 #
 node_modules/
