@@ -1,8 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
-import { initializeApp } from '@react-native-firebase/app';
-import { getAuth } from '@react-native-firebase/auth';
-import StackNavigator from './navigation/StackNavigator'
+import StackNavigator from './navigation/StackNavigator';
 
 
 const App = () => {
@@ -10,7 +8,6 @@ const App = () => {
     <>
       <StackNavigator />
     </>
-    
   )
 }
 
@@ -21,4 +18,4 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   }
-}) 
+})
