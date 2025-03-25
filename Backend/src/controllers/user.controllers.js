@@ -22,28 +22,36 @@ const genrateAccessTokenandRefreshToken = async function (userId) {
         throw new apiError(505, "something went wrong while genrating the tokens");
     }
 }
+
 const registerUser = asyncHandler(async (req, res) => {  
     console.log(req.boby) 
     console.log(req.headers)
-    const {email, password} = req.body
+  
+  const { email, enrollmentId, password } = req.body
         // check for images and files 
         // upload images or files to cloud 
         // store them in data base by creating an data entry in mongo is done by creating an object    
         // remove password and refresh token from response   
-    if (email === "" || password === ""){  
-        throw new apiError(404,"email or password is empty !") 
+  
+  if (email === "" || password === "" || enrollmentId === "") {  
+        throw new apiError(404,"email or password or enrollmentId is empty !") 
     } 
-    if (!email.includes("@nuv.ac.in")) { 
+  
+  if (!email.includes("@nuv.ac.in")) { 
         throw new apiError(400,"give a proper email!");
     }  
-    const existed_user = await User.findOne({ email })  
+  
+  const existed_user = await User.findOne({ email })  
     
-    if (existed_user) {  
-      throw new apiError(409,"a user already exists")
-    }  
-    const user = await User.create({ email, password })  
-    const { accessToken, refreshToken } = await genrateAccessTokenandRefreshToken(user._id);
-    const options = {
+  if (existed_user) {  
+      throw new apiError(409, "a user already exists")
+    } 
+    
+  const user = await User.create({ email, password,enrollmentId })  
+  
+  const { accessToken, refreshToken } = await genrateAccessTokenandRefreshToken(user._id);
+  
+  const options = {
         // options needs to desgin to send cookies!
         httpsOnly: true,
         secure: true,
@@ -61,41 +69,75 @@ const registerUser = asyncHandler(async (req, res) => {
         refreshToken,
     }, "successfull user creation and & login !"))
 }) 
+
 const complete_profile = asyncHandler(async (req, res) => {  
-    const { enrollmentId, enrollmentYear, gender, university, course, program,fullName } = req.body  
-    if ([enrollmentId, enrollmentYear, gender, university, course, program,fullName].some((i) => i == null || (typeof i === 'string' && i.trim() === ""))) {  
+    const { enrollmentYear, university, course, program,fullName,contactNumber} = req.body  
+    if ([enrollmentYear, university, course,program,fullName,contactNumber].some((i) => i == null || (typeof i === 'string' && i.trim() === ""))) {  
         throw new apiError(401, "One of the required fields is missing or empty!");
     } 
-    let ProfilePicturelocalpath  
-    console.log(req.file)
-    if (req.file){
-        ProfilePicturelocalpath = req.file.path; 
-    }  
-    console.log(ProfilePicturelocalpath)
-    if (!ProfilePicturelocalpath) {
-        throw new apiError(400, "ProfilePIcture is required !");
-      }
-    const ProfilePicture = await UploadOnCloud(ProfilePicturelocalpath);
-      if (!ProfilePicture) {
-        throw new apiError(400, "ProfilePicture is required !");
-      }
+  const normalizedData = {
+      enrollmentYear: enrollmentYear.trim(),
+      university: university.trim().toUpperCase(), 
+      course: course.trim().toUpperCase(),
+      program: program.trim().toUpperCase(),
+      fullName: normalizeName(fullName), 
+      contactNumber: validateAndNormalizeContactNumber(contactNumber)
+  };
+  
+  function validateAndNormalizeContactNumber(contactNumber) {
+    // Remove all non-digit characters (spaces, dashes, parentheses, etc.)
+    const normalizedContact = contactNumber.replace(/\D/g, '');
+    // Check if it is exactly 10 digits (you can change this rule based on your region)
+    if (normalizedContact.length !== 10) {
+        throw new apiError(400, "Contact number must be exactly 10 digits.");
+    }
+    return normalizedContact;
+}
+  function normalizeName(name) {
+      return name.trim().toLowerCase().split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+  } 
 
-    const user = await User.findByIdAndUpdate(req.user._id, { 
-        enrollmentId,
-        enrollmentYear,
-        gender, 
-        ProfilePicture:ProfilePicture?.url,
-        university,
-        course,
-        program, 
-        fullName
-    })
+  const user = await User.findByIdAndUpdate(req.user._id, normalizedData, { new: true }) // new : true gives new upadtes document !
     if (!user) {  
         throw new apiError(501,"User failed to complete profile !")
     } 
     const updateUser = await User.findById(user._id).select("-password -refreshToken")
     return res.status(200).json(new ApiResponse(200,updateUser,"User profile compeleted !"))
 })  
+
+const updateUserProfilePicture = asyncHandler(async (req, res) => {
+  try {
+
+    let ProfilePicturelocalpath  
+    console.log(req.file)
+  
+    if (req.file) {
+      ProfilePicturelocalpath = req.file.path; 
+  }  
+    console.log(ProfilePicturelocalpath) 
+    
+    if (!ProfilePicturelocalpath) {
+      throw new apiError(400, "ProfilePIcture is required !");
+    }
+  const ProfilePicture = await UploadOnCloud(ProfilePicturelocalpath);
+  
+  if (!ProfilePicture) {
+      throw new apiError(400, "ProfilePicture is required !");
+    } 
+    
+const user = await User.findByIdAndUpdate(req.user?._id,{ $set: { ProfilePicture:ProfilePicture} }, { new: true } ).select('ProfilePicture')  
+if (!user) {
+  throw new apiError(404, "User not found");
+}
+return res
+  .status(200)
+  .json(new ApiResponse(201, user, "Profile Picture Updated successfully!"));
+  }
+  catch (error) {  
+  throw new apiError(402, "something went wrong during changing email");
+}}); 
 
 const loginUser = asyncHandler(async (req, res) => {
         // get details username and password thorugh req.body
@@ -104,14 +146,14 @@ const loginUser = asyncHandler(async (req, res) => {
         // genrate the access token and referesh token
         // sent cookies and sent response
       
-        const { email, password } = req.body; // destructing data
+      const { email, password } = req.body; // destructing data
       
-        if ([email, password].some((i) => i?.trim() === "")) {
+      if ([email, password].some((i) => i?.trim() === "")) {
           throw new apiError(400, "the Username or Password is empty");
         }
-        const user = await User.findOne({ email }); // query to find user from username & to  return the user instance !!!!!
+      const user = await User.findOne({ email }); // query to find user from username & to  return the user instance !!!!!
       
-        if (!user) {
+      if (!user) {
           throw new apiError(409, "the Email doesn't exists");
         }
       
@@ -146,8 +188,8 @@ const loginUser = asyncHandler(async (req, res) => {
               "User Logged In !"
             )
           );
-      });
-      
+});
+            
 const logoutUser = asyncHandler(async (req, res) => {
         // run the authentication middleware to get user id
         // remove access and refresh token , also from the database
@@ -168,6 +210,7 @@ const logoutUser = asyncHandler(async (req, res) => {
           .clearCookie("refreshToken", options)
           .json(new ApiResponse(200, {}, "User logged out !"));
 });  
+
 const GetUserProfile = asyncHandler(async (req, res) => {  
   // to get all user detailes and user's sell posts 
   const user = User.findById(req.user?._id).select("-password -refreshToken").populate('userSellpost').exec((err, user) => {  
@@ -181,6 +224,7 @@ const GetUserProfile = asyncHandler(async (req, res) => {
   }  
   return res.status(200).json(new ApiResponse(201,))
 })
+
 const updateAccountDetails = asyncHandler(async (req, res) => {
   try {
     const { email } = req.body;
@@ -203,6 +247,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     throw new apiError(402, "something went wrong during changing email");
   }
 }); 
+
 const DeleteUser = asyncHandler(async (req, res) => {
   const { password } = req.body;
   if (!password) {
@@ -230,4 +275,5 @@ const DeleteUser = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(201, deleteduser, "user deleted successfully"));
 });
-export { registerUser,complete_profile,loginUser,logoutUser,DeleteUser,GetUserProfile}
+
+export { registerUser, complete_profile, loginUser, logoutUser, DeleteUser, GetUserProfile, updateUserProfilePicture}
