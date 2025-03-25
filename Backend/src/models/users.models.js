@@ -15,40 +15,52 @@ const userSchema = new mongoose.Schema({
     }, 
     password: {
         type: String, 
-        required: true,}, 
+    required: true,
+  }, 
     enrollmentId: {
         type: String,  
         default: "00000000", 
-    }, 
+  },
+    
     enrollmentYear: { 
     type: String, 
-    default: null
-    }, 
+    default: null 
+  },
+    
     gender: {
         type: String,
         enum: ['male', 'female', 'others'],  // Only allows these values
-      default: null 
-
+        default: null 
       }, 
     ProfilePicture: { 
         type: String,  
       default: null
-    }, 
-    university: { 
+  },
+    
+    University: { 
       type: String,  
       trim: true ,
       default: null
-    }, 
+  }, 
+    
     course: { 
         type: String, 
       trim: true ,
       default: null
-    },  
+  }, 
+    
     program: { 
         type: String, 
         trim: true, 
         default: null
-  },  
+  }, 
+  
+  contactNumber: {      
+    type: String,
+    trim: true,
+    default: null
+  },
+  
   refreshToken: {
     type: String, 
   }
