@@ -1,8 +1,18 @@
-import {app} from "./app.js";  
-import dbConnection from "./db/dbconnector.js";  
-import 'dotenv/config'
+import { app, corsOptions } from "./app.js"; 
+import { Server } from "socket.io";  
+import dbConnection from "./db/dbconnector.js";   
+import http from 'http'; 
+import 'dotenv/config' 
+
+
+const server = http.createServer(app) 
+const io = new Server(server, { cors: corsOptions });
+io.on('connection', (socket) => {
+    console.log("a new user is connected !",socket.id)
+});
 dbConnection()
-    .then(() => { app.listen(process.env.PORT, () => {   
+    .then(() => {
+        server.listen(process.env.PORT, () => {    
         console.log(`server is working at ${process.env.PORT}`)
     })})
     .catch((error)=>{ 
