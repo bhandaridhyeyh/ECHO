@@ -63,7 +63,10 @@ const userSchema = new mongoose.Schema({
   
   refreshToken: {
     type: String, 
-  }
+  } ,
+  is_online: { type: Boolean, default: false },
+  last_ping: { type: Date, default: Date.now }, 
+  
 },
 { timestamps: true }) 
 
