@@ -1,9 +1,10 @@
-// import { Router } from "express";
-// import { CreatePost, DeletePost, GetallPost, SearchedPost, UpdatePost } from "../controllers/post.controllers.js";
+import { Router } from "express";
+import { verifyJWT } from "../middlewares/verifyJwt.js";
+import { CreatePost, DeletePost, GetallPost, SearchedPost, UpdatePost, GetSpecificPost } from "../controllers/post.controllers.js"; 
+import { upload } from "../middlewares/multer.middlewares.js";
 
-// const router = Router() 
-// router.route('/create-sell-post').post(CreatePost) 
-// router.route('/update-sell-post').put(UpdatePost)
-// router.route('/delete-sell-post').delete(DeletePost)
-// router.route('/getall-sell-post').get(GetallPost)
-// router.route('/search-sell-post').get(SearchedPost) 
+const router = Router() 
+router.route('/sell-posts').post(verifyJWT,upload.single('Productpicture'),CreatePost).get(GetallPost); 
+router.route('/sell-post/:id').put(UpdatePost).delete(DeletePost).get(GetSpecificPost);
+router.route('/sell-posts/search').get(SearchedPost);
+export default router 

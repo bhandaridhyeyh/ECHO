@@ -15,11 +15,11 @@ app.use(express.static('public')) // to configure public assest and store them
 app.use(express.json())
   
 import userRoutes from './routes/user.routes.js' 
-// import PostRoutes from './routes/post.routes.js' 
+import PostRoutes from './routes/post.routes.js' 
 import { verifyJWT } from './middlewares/verifyJwt.js';
 
 app.use('/user', userRoutes) 
-// app.use('/post',verifyJWT,PostRoutes)
+app.use('/post',PostRoutes)
 app.get("/",(req,res) => { 
     return res.sendFile("/public/temp/index.html")
 })
