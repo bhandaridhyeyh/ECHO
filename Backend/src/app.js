@@ -16,10 +16,11 @@ app.use(express.json())
   
 import userRoutes from './routes/user.routes.js' 
 import PostRoutes from './routes/post.routes.js' 
-import { verifyJWT } from './middlewares/verifyJwt.js';
+import Dealroutes from './routes/deal.routes.js' 
 
 app.use('/user', userRoutes) 
-app.use('/post',PostRoutes)
+app.use('/post', PostRoutes) 
+app.use('/deal',Dealroutes)
 app.get("/",(req,res) => { 
     return res.sendFile("/public/temp/index.html")
 })

@@ -73,8 +73,44 @@ const CreatePost = asyncHandler(async (req, res) => {
 });  
 
 const UpdatePost = asyncHandler(async (req, res) => {});
-const DeletePost = asyncHandler(async (req, res) => {});
-const GetallPost = asyncHandler(async (req, res) => {});
-const SearchedPost = asyncHandler(async (req, res) => {});
-const GetSpecificPost = asyncHandler(async (req, res) => {});
-export { CreatePost, UpdatePost, DeletePost, GetallPost, SearchedPost,GetSpecificPost };
+const DeletePost = asyncHandler(async (req, res) => {
+
+});
+const GetallPost = asyncHandler(async (req, res) => { 
+  const posts = await Sellpost.find(); 
+  res.status(201) 
+  .json(new ApiResponse(201,posts,"Returned all the posts !"))
+});
+
+const SearchedPost = asyncHandler(async (req, res) => {
+  
+const { title, category, minPrice, maxPrice } = req.query;
+
+let filter = {};
+
+if (title) {
+  filter.title = { $regex: title, $options: "i" }; // Case-insensitive search
+}
+if (category) {
+  filter.category = category;
+}
+if (minPrice || maxPrice) {
+  filter.price = {};
+  if (minPrice) filter.price.$gte = parseInt(minPrice); // Price >= minPrice $gte = greater than or equal to 
+  if (maxPrice) filter.price.$lte = parseInt(maxPrice); // Price <= maxPrice $lte = less than or equal to  
+}
+
+
+const posts = await Sellpost.find(filter);
+
+if (!posts.length) {
+  throw new apiError(404, "No matching posts found.");
+}
+
+  res.status(200).json(new ApiResponse(201, posts, "Searched Results"));
+
+}); 
+
+const GetSpecificPost = asyncHandler(async (req, res) => { });
+
+export { CreatePost, UpdatePost, DeletePost, GetallPost, SearchedPost, GetSpecificPost };
