@@ -6,10 +6,8 @@ import 'dotenv/config'
 
 
 const server = http.createServer(app) 
-const io = new Server(server, { cors: corsOptions });
-io.on('connection', (socket) => {
-    console.log("a new user is connected !",socket.id)
-});
+// const io = new Server(server, { cors: corsOptions });
+
 dbConnection()
     .then(() => {
         server.listen(process.env.PORT, () => {    
