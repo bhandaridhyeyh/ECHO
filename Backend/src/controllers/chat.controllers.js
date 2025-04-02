@@ -14,6 +14,7 @@ const socketHandler = (io) => {
             //checking and sending for any msg which to delivere when user comes online 
             const unreadMessages = await Message.find({ receiver: userId, status: "pending" });
             for (const msg of unreadMessages) {
+                await Message.findByIdAndUpdate(msg._id, { status: "delivered" });
                 io.to(users[userId]).emit("receiveMessage", {
                     _id: msg._id,
                     senderId: msg.sender,
@@ -21,7 +22,6 @@ const socketHandler = (io) => {
                     status: "delivered",
                     timestamp: msg.timestamp,
                 });
-                await Message.findByIdAndUpdate(msg._id, { status: "delivered" });
             }
         }) 
         // to retrieve chat history 
@@ -29,8 +29,8 @@ const socketHandler = (io) => {
             try {
                 const chatHistory = await Message.find({
                     $or: [
-                        { senderId: userId1, receiverId: userId2 },
-                        { senderId: userId2, receiverId: userId1 },
+                        { sender: userId1, receiver: userId2 },
+                        { sender: userId2, receiver: userId1 },
                     ],
                 }).sort({ timestamp: 1 }); // Sort messages by timestamp to show in order
             
