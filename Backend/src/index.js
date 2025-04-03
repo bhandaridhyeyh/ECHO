@@ -8,7 +8,6 @@ import 'dotenv/config'
 
 const server = http.createServer(app) 
 const io = new Server(server, { cors: corsOptions });
-
 dbConnection()
     .then(() => {
         server.listen(process.env.PORT, () => {    
