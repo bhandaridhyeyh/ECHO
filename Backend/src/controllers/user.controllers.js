@@ -46,8 +46,11 @@ const registerUser = asyncHandler(async (req, res) => {
   if (existed_user) {  
       throw new apiError(409, "a user already exists")
     } 
-    
-  const user = await User.create({ email, password,enrollmentId })  
+  const a = email.split("@") 
+  const fullName = a[0].replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) 
+ 
+  
+  const user = await User.create({ fullName, email, password, enrollmentId })  
   
   const { accessToken, refreshToken } = await genrateAccessTokenandRefreshToken(user._id);
   

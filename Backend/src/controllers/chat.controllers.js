@@ -1,7 +1,47 @@
 import { User } from "../models/users.models.js";   
 import { Message } from "../models/message.models.js"; 
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { apiError } from "../utils/apiError.js"; 
+import {Chat} from "../models/chat.models.js"
+import ApiResponse from "../utils/apiResponse.js";
+
 const users = {} 
 
+const CreatChat = asyncHandler(async (req, res) => {
+    const { participant_id1, participant_id2 } = req.body
+    if (!participant_id1 || !participant_id2 || participant_id1 === participant_id2) {  
+        throw new apiError(404, "Invalid participants: IDs are missing or both are the same.")
+    } 
+    const p1 = await User.findById(participant_id1) 
+    const p2 = await User.findById(participant_id2) 
+    if (!p1 || !p2) {  
+        throw new apiError(404,"User not found to the Database")
+    }   
+    let chat = await Chat.findOne({ participants: { $all: [participant_id1, participant_id2] } }); 
+    if (chat) {
+        return res.status(203).json(new ApiResponse(202, chat, "Found and already existing Chat !"))
+    }
+    else {
+        chat = await Chat.create({ participants: [participant_id1, participant_id2] }) 
+        if (!chat) { 
+            throw new apiError(501,"Failed to Create the Chat !")
+        } 
+        return res.status(201).json(201,chat,"Succesfully Created the Chat")
+    }
+})  
+const GetAllUserChats = asyncHandler(async (req, res) => {  
+    const userId = req.params  
+    if (!userId) {  
+        throw new apiError(404, "userId Not Found !") 
+    }
+    const chats = await Chat.find({ participants: userId }) 
+    if (!chats) {  
+        throw new apiError(401, "No Chats were Found for the User !") 
+    } 
+    return res.status(201).json(new ApiResponse(201, chats, "Chats Found SuccesFully")) 
+    
+})
+ 
 const socketHandler = (io) => {
     io.on('connection', (socket) => {
         console.log("user socket id :", socket.id)
@@ -78,4 +118,4 @@ const socketHandler = (io) => {
         })
     })}
 
-export {socketHandler}
+export {socketHandler,CreatChat}

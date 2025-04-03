@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
-const messageSchema = new mongoose.Schema({
+const messageSchema = new mongoose.Schema({ 
+  chat: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true },
   sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -17,8 +18,8 @@ const messageSchema = new mongoose.Schema({
   },
   status: {
     type: String,  
-    enum: ['delivered', 'seen','pending',"not seen"],
-    default: 'delivered' 
+    enum: ['sent','delivered','read'],
+    default: 'sent' 
   }
 });
 

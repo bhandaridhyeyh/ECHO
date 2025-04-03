@@ -22,7 +22,8 @@ import Threadroutes from './routes/thread.routes.js'
 app.use('/user', userRoutes) 
 app.use('/post', PostRoutes) 
 app.use('/deal',Dealroutes)
-app.use('/thread',Threadroutes)
+app.use('/thread', Threadroutes) 
+app.use('/Chat',Threadroutes)
 app.get("/",(req,res) => { 
     return res.sendFile("/public/temp/index.html")
 })
