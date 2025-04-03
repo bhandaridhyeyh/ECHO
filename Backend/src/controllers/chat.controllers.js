@@ -34,7 +34,7 @@ const GetAllUserChats = asyncHandler(async (req, res) => {
     if (!userId) {  
         throw new apiError(404, "userId Not Found !") 
     }
-    const chats = await Chat.find({ participants: userId }) 
+    const chats = await Chat.find({ participants: userId }).populate("participants", "fullName program course enrollmentYear ProfilePicture") 
     if (!chats) {  
         throw new apiError(401, "No Chats were Found for the User !") 
     } 

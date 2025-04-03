@@ -74,16 +74,15 @@ const registerUser = asyncHandler(async (req, res) => {
 }) 
 
 const complete_profile = asyncHandler(async (req, res) => {  
-    const { enrollmentYear, university, course, program,fullName,contactNumber} = req.body  
-    if ([enrollmentYear, university, course,program,fullName,contactNumber].some((i) => i == null || (typeof i === 'string' && i.trim() === ""))) {  
+    const { enrollmentYear, university, course, program,contactNumber} = req.body  
+    if ([enrollmentYear, university, course,program,contactNumber].some((i) => i == null || (typeof i === 'string' && i.trim() === ""))) {  
         throw new apiError(401, "One of the required fields is missing or empty!");
     } 
   const normalizedData = {
       enrollmentYear: enrollmentYear.trim(),
       university: university.trim().toUpperCase(), 
       course: course.trim().toUpperCase(),
-      program: program.trim().toUpperCase(),
-      fullName: normalizeName(fullName), 
+      program: program.trim().toUpperCase(), 
       contactNumber: validateAndNormalizeContactNumber(contactNumber)
   };
   
@@ -96,11 +95,6 @@ const complete_profile = asyncHandler(async (req, res) => {
     }
     return normalizedContact;
 }
-  function normalizeName(name) {
-      return name.trim().toLowerCase().split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-  } 
 
   const user = await User.findByIdAndUpdate(req.user._id, normalizedData, { new: true }) // new : true gives new upadtes document !
     if (!user) {  
