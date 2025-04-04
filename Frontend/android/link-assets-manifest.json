@@ -1,3 +1,9 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:10fbef8b897ab8c4e2c0bf679f55900bd3d14f6fdbcc514bb539c2782707f372
-size 155
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Bungee-Regular.ttf",
+      "sha1": "a3164074d741797f169cddcf7097683556b3df87"
+    }
+  ]
+}

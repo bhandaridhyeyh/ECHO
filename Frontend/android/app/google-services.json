@@ -1,3 +1,29 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:b2dc7c3e91dadd130d1028b3f692a6cd9b12a811effcb4028f5d4442cd92cb99
-size 665
+{
+  "project_info": {
+    "project_number": "691241778318",
+    "project_id": "trademate-881d0",
+    "storage_bucket": "trademate-881d0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691241778318:android:420e77377beb1995e11ddf",
+        "android_client_info": {
+          "package_name": "com.trademate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJWVqb0Nq8ItZi5cqSO_wK-fR-lcsZNro"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

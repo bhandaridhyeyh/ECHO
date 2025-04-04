@@ -1,3 +1,162 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:d5104f3c949778520bf47ec64017911b4675e3ea8fd8b70f34e42efe4be9439a
-size 6712
+[
+    {
+        "id": 1,
+        "name": "C Programming",
+        "price": 70,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Books",
+        "imageKey": "book1",
+        "usage": "FY - BBA"
+    },
+    {
+        "id": 2,
+        "name": "OOPs Using C++",
+        "price": 0,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Books",
+        "imageKey": "book2",
+        "usage": "SY - CSE"
+    },
+    {
+        "id": 3,
+        "name": "Pearson C",
+        "price": 120,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Books",
+        "imageKey": "book3",
+        "usage": "FY - CSE"
+    },
+    {
+        "id": 4,
+        "name": "TY - IT Books",
+        "price": 550,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Books",
+        "imageKey": "book4",
+        "usage": "TY - IT"
+    },
+    {
+        "id": 5,
+        "name": "COA",
+        "price": 20,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Notes",
+        "imageKey": "notes1",
+        "usage": "SY - CSE"
+    },
+    {
+        "id": 6,
+        "name": "Marketing",
+        "price": 30,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Notes",
+        "imageKey": "notes2",
+        "usage": "FY - BBA"
+    },
+    {
+        "id": 7,
+        "name": "Protocols",
+        "price": 50,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Notes",
+        "imageKey": "notes3",
+        "usage": "SY - CSE"
+    },
+    {
+        "id": 8,
+        "name": "DBMS",
+        "price": 0,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Notes",
+        "imageKey": "notes4",
+        "usage": "FY - BCA"
+    },
+    {
+        "id": 9,
+        "name": "Workshop Apron",
+        "price": 100,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Tools",
+        "imageKey": "tools1",
+        "usage": "FY - ME"
+    },
+    {
+        "id": 10,
+        "name": "ME Workshop Tools",
+        "price": 800,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Tools",
+        "imageKey": "tools2",
+        "usage": "TY - ME"
+    },
+    {
+        "id": 11,
+        "name": "D&P Products",
+        "price": 600,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Tools",
+        "imageKey": "tools3",
+        "usage": "FY - B.Des"
+    },
+    {
+        "id": 12,
+        "name": "EG Tools",
+        "price": 130,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Tools",
+        "imageKey": "tools4",
+        "usage": "FY - BBA"
+    },
+    {
+        "id": 13,
+        "name": "HP Elitebook Core-i5",
+        "price": 52000,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Gadgets",
+        "imageKey": "gadget1",
+        "usage": "BCA, B.Tech"
+    },
+    {
+        "id": 14,
+        "name": "Scientific Calculator",
+        "price": 800,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Gadgets",
+        "imageKey": "gadget2",
+        "usage": "FY - BSc"
+    },
+    {
+        "id": 15,
+        "name": "Lenovo Tablet",
+        "price": 3500,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Gadgets",
+        "imageKey": "gadget3",
+        "usage": "BCA, B.Tech"
+    },
+    {
+        "id": 16,
+        "name": "BOSE Headphones",
+        "price": 9000,
+        "seller": "Namrata Kaur",
+        "description": "Book in good condition. Really beginner friendly. Referred by faculty as well. Exercises helps alot for exams. Very useful for 1st Sem students. Minimal rate. PS: Don't Bargain",
+        "category": "Gadgets",
+        "imageKey": "gadget4",
+        "usage": "BCA, B.Tech"
+    }
+]
