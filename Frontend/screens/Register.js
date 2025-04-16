@@ -23,7 +23,7 @@ const Register = () => {
     }
 
     try {
-      const response = await axios.post('http://192.168.29.241:3600/user/register', { // Replace with your actual endpoint
+      const response = await axios.post('http://192.168.191.117:3600/user/register', { // Replace with your actual endpoint
         email,
         password,
         enrollmentId,

@@ -88,7 +88,7 @@ const Sell = () => {
                 type: imageType,
             });
 
-            const response = await axios.post(`http://192.168.29.241:3600/post/sell-posts`, formData, { // Assuming your backend route is /api/posts
+            const response = await axios.post(`http://192.168.191.117:3600/post/sell-posts`, formData, { // Assuming your backend route is /api/posts
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     Authorization: `Bearer ${token}`,
