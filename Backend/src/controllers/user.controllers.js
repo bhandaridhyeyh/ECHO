@@ -3,6 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/users.models.js"; 
 import ApiResponse from "../utils/apiResponse.js"; 
 import { UploadOnCloud } from "../utils/cloudinary.js";
+import nodemailer from 'nodemailer';
 import jwt from "jsonwebtoken";  
 import 'dotenv/config'
 
@@ -23,35 +24,67 @@ const genrateAccessTokenandRefreshToken = async function (userId) {
     }
 }
 
-const registerUser = asyncHandler(async (req, res) => {  
-    console.log(req.boby) 
-    console.log(req.headers)
-  
-  const { email, enrollmentId, password } = req.body
-        // check for images and files 
-        // upload images or files to cloud 
-        // store them in data base by creating an data entry in mongo is done by creating an object    
-        // remove password and refresh token from response   
-  
-  if (email === "" || password === "" || enrollmentId === "") {  
-        throw new apiError(404,"email or password or enrollmentId is empty !") 
-    } 
-  
-  if (!email.includes("@nuv.ac.in")) { 
-        throw new apiError(400,"give a proper email!");
-    }  
-  
-  const existed_user = await User.findOne({ email })  
-    
-  if (existed_user) {  
-      throw new apiError(409, "a user already exists")
-    } 
-  const a = email.split("@") 
-  const fullName = a[0].replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) 
+const otpStore = {}; // In-memory OTP storage for demo
+const transporter = nodemailer.createTransport({ 
+  secure: true, 
+  host: 'smtp.gmail.com', 
+  port: 465, 
+  auth: { 
+    user: 'debuggironman@gmail.com', 
+    pass: process.env.GOOGLE_KEY
+  }
+}) 
+
+
+const sendotp = asyncHandler(async (req, res) => {
+  const { email, password } = req.body
+  if (email === "" || password === "") {
+    throw new apiError(404, "email or password or enrollmentId is empty !")
+  }
+  if (!email.includes("@nuv.ac.in")) {
+    throw new apiError(400, "give a proper email!");
+  }
+  const existed_user = await User.findOne({ email })
+  if (existed_user) {
+    throw new apiError(409, "a user already exists")
+  }
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  otpStore[email] = {
+    otp,
+    password,
+    expiresAt: Date.now() + 5 * 60 * 1000, // 5 min
+  };
+  const mailOptions = {
+    from: "debuggironman@gmail.com",
+    to: email,
+    subject: "Test email!",
+    text: `Your OTP is: ${otp}`,
+  }
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return res.status(200).json(new ApiResponse(201, null, "Email sent successfully"));
+  } catch (error) {
+    console.log(error);
+    throw new apiError(500, "Failed to send email!");
+  }
+});
  
-  
-  const user = await User.create({ fullName, email, password, enrollmentId })  
-  
+const registerUser = asyncHandler(async (req, res) => {  
+  const { email, otp } = req.body 
+
+  if (!record || Date.now() > record.expiresAt) {
+    throw new apiError(401,"OTP expired or invalid.");
+  }
+  if (parseInt(otp) !== record.otp) {
+    throw new apiError(402, "Wrong OTP.");
+  }
+
+  // const a = email.split("@") 
+
+  // const fullName = a[0].replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) 
+
+  const user = await User.create({ email, password})  
+
   const { accessToken, refreshToken } = await genrateAccessTokenandRefreshToken(user._id);
   
   const options = {
@@ -273,4 +306,4 @@ const DeleteUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, deleteduser, "user deleted successfully"));
 });
 
-export { registerUser, complete_profile, loginUser, logoutUser, DeleteUser, GetUserProfile, updateUserProfilePicture}
+export {sendotp, registerUser, complete_profile, loginUser, logoutUser, DeleteUser, GetUserProfile, updateUserProfilePicture}
