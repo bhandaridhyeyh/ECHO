@@ -16,7 +16,7 @@ const Login = () => {
 
   const SignIn = async () => {
     try {
-      const response = await axios.post(`http://192.168.191.117:3600/user/login`, { // Adjust the endpoint if necessary
+      const response = await axios.post(`http://192.168.19.29:3600/user/login`, { // Adjust the endpoint if necessary
         email: email,
         password: password,
       });
@@ -45,7 +45,10 @@ const Login = () => {
       if (error.response && error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
       } else if (error.request) {
-        errorMessage = "Network error. Please check your internet connection.";
+        // errorMessage = "Network error. Please check your internet connection.";
+        console.log(error.request);
+        console.log("Error Details:", error);
+
       }
       Alert.alert("Login Failed", errorMessage);
     }

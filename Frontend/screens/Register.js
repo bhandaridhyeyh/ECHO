@@ -1,55 +1,70 @@
-import { StyleSheet, Text, View, SafeAreaView, Image, KeyboardAvoidingView, TextInput, Pressable, ScrollView, Alert } from 'react-native';
-import React, { useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import React, {useState} from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  SafeAreaView,
+  Image,
+  KeyboardAvoidingView,
+  TextInput,
+  Pressable,
+  ScrollView,
+  Alert,
+} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
-import { storeAccessToken } from '../utilities/keychainUtils'; // Assuming this is the correct path
 
 const Register = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState(""); // Added confirm password state
-  const [enrollmentId, setEnrollmentId] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const navigation = useNavigation();
 
   const handleSignUp = async () => {
-    if (!email || !password || !confirmPassword || !enrollmentId) {
-      Alert.alert("Error", "Please fill in all the fields.");
+    if (!email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all the fields.');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match!");
+      Alert.alert('Error', 'Passwords do not match!');
       return;
     }
 
     try {
-      const response = await axios.post('http://192.168.191.117:3600/user/register', { // Replace with your actual endpoint
-        email,
-        password,
-        enrollmentId,
-      });
+      const response = await axios.post(
+        'http://192.168.19.29:3600/user/register',
+        {
+          email,
+          password,
+        },
+      );
 
-      if (response.status === 201) {
-        const { accessToken } = response.data.data; // Adjust based on your actual response structure
-        const storedSuccessfully = await storeAccessToken(accessToken);
-
-        if (storedSuccessfully) {
-          Alert.alert("Registration Successful!");
-          navigation.navigate("Main");
-        } else {
-          Alert.alert("Error", "Failed to securely store the access token. Please try again.");
-        }
+      if (response.status === 200) {
+        Alert.alert(
+          'OTP Sent',
+          'Please check your email for the verification code.',
+        );
+        navigation.navigate('Otp', {email}); // Navigate to Otp.js, passing the email
       } else {
-        Alert.alert("Registration Failed", response.data.message || "Registration failed. Please try again.");
+        Alert.alert(
+          'Error',
+          response.data.message || 'Failed to send OTP. Please try again.',
+        );
       }
     } catch (error) {
-      let errorMessage = "Something went wrong. Please check your internet connection and try again.";
-      if (error.response && error.response.data && error.response.data.message) {
+      let errorMessage =
+        'Something went wrong. Please check your internet connection and try again.';
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
         errorMessage = error.response.data.message;
       } else if (error.request) {
-        errorMessage = "Network error. Please check your internet connection.";
+        errorMessage = 'Network error. Please check your internet connection.';
       }
-      Alert.alert("Registration Failed", errorMessage);
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -57,7 +72,10 @@ const Register = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.logoContainer}>
-          <Image style={styles.logo} source={require('../assets/images/logo.png')} />
+          <Image
+            style={styles.logo}
+            source={require('../assets/images/logo.png')}
+          />
         </View>
 
         <KeyboardAvoidingView>
@@ -67,17 +85,6 @@ const Register = () => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Enrollment ID:</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                value={enrollmentId}
-                onChangeText={setEnrollmentId}
-                placeholder="Enter your Enrollment ID"
-                placeholderTextColor="#555"
-                style={styles.input}
-              />
-            </View>
-
             <Text style={styles.label}>E-mail:</Text>
             <View style={styles.inputWrapper}>
               <TextInput
@@ -91,7 +98,10 @@ const Register = () => {
 
             <Text style={styles.label}>Password:</Text>
             <View style={styles.inputWrapper}>
-              <Image source={require('../assets/icons/icons8-lock-28.png')} style={styles.icon} />
+              <Image
+                source={require('../assets/icons/icons8-lock-28.png')}
+                style={styles.icon}
+              />
               <TextInput
                 value={password}
                 onChangeText={setPassword}
@@ -104,7 +114,10 @@ const Register = () => {
 
             <Text style={styles.label}>Confirm Password:</Text>
             <View style={styles.inputWrapper}>
-              <Image source={require('../assets/icons/icons8-lock-28.png')} style={styles.icon} />
+              <Image
+                source={require('../assets/icons/icons8-lock-28.png')}
+                style={styles.icon}
+              />
               <TextInput
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -117,11 +130,16 @@ const Register = () => {
           </View>
 
           <Pressable onPress={handleSignUp} style={styles.button}>
-            <Image source={require('../assets/icons/icons8-arrow-50.png')} style={styles.buttonIcon} />
+            <Image
+              source={require('../assets/icons/icons8-arrow-50.png')}
+              style={styles.buttonIcon}
+            />
           </Pressable>
 
           <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.loginText}>Already have an account? Login</Text>
+            <Text style={styles.loginText}>
+              Already have an account? Login
+            </Text>
           </Pressable>
         </KeyboardAvoidingView>
       </ScrollView>
@@ -129,13 +147,11 @@ const Register = () => {
   );
 };
 
-export default Register;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "white",
-    alignItems: "center",
+    backgroundColor: 'white',
+    alignItems: 'center',
   },
   logoContainer: {
     alignItems: 'center',
@@ -150,7 +166,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 55,
-    color: "#59008F",
+    color: '#59008F',
     fontWeight: 'bold',
     fontFamily: 'Bungee-Regular',
   },
@@ -188,7 +204,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: "#555",
+    color: '#555',
     fontSize: 17,
   },
   button: {
@@ -211,3 +227,5 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
 });
+
+export default Register;

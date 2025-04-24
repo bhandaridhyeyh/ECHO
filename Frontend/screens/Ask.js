@@ -45,7 +45,7 @@ const Ask = () => {
             return;
       } 
 
-      const response = await axios.post('http://192.168.191.117:3600/thread/creat', {
+      const response = await axios.post('http://192.168.19.29:3600/thread/creat', {
         content: inputMessage,
         markedAsFlagged: isFlagged,  // Send flag status
       }, {
