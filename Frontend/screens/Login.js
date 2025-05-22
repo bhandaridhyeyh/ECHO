@@ -1,34 +1,35 @@
 import { StyleSheet, Text, View, SafeAreaView, Image, KeyboardAvoidingView, TextInput, Pressable, Alert, ScrollView, Dimensions } from 'react-native';
 import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
+import axios from 'axios';  
+import { API_URL } from '@env' 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storeAccessToken } from '../utilities/keychainUtils'; // Import the storeAccessToken function
 
 const { width, height } = Dimensions.get('window');
-
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigation = useNavigation();
-
   // Replace this with your backend API URL
-  const BASE_URL = '';
 
   const SignIn = async () => {
     try {
-      const response = await axios.post(`http://192.168.19.29:3600/user/login`, { // Adjust the endpoint if necessary
+      const response = await axios.post(`${API_URL}/user/login`, { // Adjust the endpoint if necessary
         email: email,
         password: password,
       });
 
       // Assuming your backend sends back user data and tokens upon successful login
       if (response.status === 200) {
-        const { accessToken } = response.data.data; // Adjust based on your actual response structure
+        const { accessToken, userObject } = response.data.data; // Adjust based on your actual response structure
 
         // Store the access token securely using keychainUtils
-        const storedSuccessfully = await storeAccessToken(accessToken);
+        const storedSuccessfully = await storeAccessToken(accessToken); 
 
-        if (storedSuccessfully) {
+        if (storedSuccessfully) {  
+          console.log(userObject)
+          await AsyncStorage.setItem('tradeMateUserId',userObject._id);
           Alert.alert("Login Successful!");
           navigation.navigate("Main");
         } else {

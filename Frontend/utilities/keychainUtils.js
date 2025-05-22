@@ -1,7 +1,7 @@
 // keychainUtils.js
 
-import * as Keychain from 'react-native-keychain';
-
+import * as Keychain from 'react-native-keychain'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const ACCESS_TOKEN_KEY = 'tradeMateAccessToken'; // Use a consistent key for your access token
 
 const storeAccessToken = async (accessToken) => {
@@ -41,4 +41,13 @@ const deleteAccessToken = async () => {
   }
 };
 
-export { storeAccessToken, getAccessToken, deleteAccessToken };
+const getCurrentUserId = async () => {
+  try {
+    const userId = await AsyncStorage.getItem('tradeMateUserId');
+    return userId;
+  } catch (err) {
+    console.error("Failed to get user ID:", err);
+    return null;
+  }
+};
+export { storeAccessToken, getAccessToken, deleteAccessToken,getCurrentUserId };

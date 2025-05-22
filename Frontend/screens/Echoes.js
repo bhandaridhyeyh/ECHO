@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, Image, Pressable, ScrollView, ActivityIndicator, Alert, Share } from 'react-native';
 import axios from 'axios';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-
-const Echoes = ({ navigation }) => {
-    const [echoes, setEchoes] = useState([]);
+import { API_URL } from '@env'   
+import { RefreshControl } from 'react-native';
+import { getAccessToken } from '../utilities/keychainUtils'; 
+ 
+const Echoes = ({ navigation, route }) => {
+    const [echoes, setEchoes] = useState([]); 
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
+   
 
     // Dummy data for fallback
     const dummyEchoes = [
@@ -15,7 +20,8 @@ const Echoes = ({ navigation }) => {
             id: '1',
             userName: 'Ishika Patel',
             userId: 'user1',
-            timestamp: '2h',
+            timestamp: '2h', 
+            markedasFlag: "false",
             content: 'Looking for notes on quantum mechanics. Anyone have a good resource?',
             userImage: 'https://via.placeholder.com/40',
         },
@@ -24,7 +30,7 @@ const Echoes = ({ navigation }) => {
             userName: 'Aryan Shah',
             userId: 'user2',
             timestamp: '1d',
-            content: 'Project group forming for the AI course. DM me if interested!',
+            content: 'Project group forming for the bi course. DM me if interested!',
             userImage: 'https://via.placeholder.com/40',
         },
         {
@@ -36,43 +42,54 @@ const Echoes = ({ navigation }) => {
             userImage: 'https://via.placeholder.com/40',
         },
     ];
-
-    useEffect(() => {
-        const fetchEchoes = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                // Simulate an API call
-                const response = await axios.get('https://your-api-endpoint.com/echoes');
-                // console.log(response.data);
-                if (response.status >= 200 && response.status < 300 && Array.isArray(response.data)) {
-                    setEchoes(response.data);
-                }
-                else {
-                    setEchoes(dummyEchoes);
-                    Alert.alert(
-                        "Warning",
-                        "Empty or invalid data from server. Using dummy data.",
-                        [{ text: "OK" }]
-                    );
-                }
-
-            } catch (err) {
-                // Handle errors, including network errors and invalid responses
-                setError(err.message || 'An unexpected error occurred');
-                setEchoes(dummyEchoes); // Fallback to dummy data
-                Alert.alert(
-                    "Error",
-                    "Failed to load echoes. Using dummy data.",
-                    [{ text: "OK" }]
-                );
-
-            } finally {
-                setLoading(false);
+     useEffect(() => {
+            if (route.params?.newItem) {
+                fetchEchoes(); // Re-fetch posts to include the new item
+                // Alternatively, if you are certain the backend returns the new item in the next fetch,
+                // you could keep the current approach but be mindful of potential duplication.
+                // setRecentlyAddedItems((prevItems) => [route.params.newItem, ...prevItems]);
             }
-        };
-
+     }, [route.params?.newItem]); 
+    
+    useEffect(() => {
         fetchEchoes();
+    }, []); 
+    
+const fetchEchoes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+        const token = await getAccessToken();
+        if (!token) {
+            Alert.alert('Authentication Required', 'Please log in to post an item.');
+            navigation.navigate('Login');
+            return;
+        }
+        const response = await axios.get(`${API_URL}/echoes/all`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        const echoes = response.data?.data;
+        if (response.status >= 200 && response.status < 300 && Array.isArray(echoes)) {
+            setEchoes(echoes);
+        } else {
+            setEchoes(dummyEchoes);
+            Alert.alert("Warning", "Empty or invalid data from server. Using dummy data.");
+        }
+    } catch (err) {
+        setError(err.message || 'An unexpected error occurred');
+        setEchoes(dummyEchoes);
+        Alert.alert("Error", "Failed to load echoes. Using dummy data.");
+    } finally {
+        setLoading(false);
+        setRefreshing(false);
+    }
+};
+
+    const onRefresh = useCallback(() => {
+                    setRefreshing(true);
+                    fetchEchoes();
     }, []);
 
     const handleShare = async (userId, content) => {
@@ -129,20 +146,23 @@ const Echoes = ({ navigation }) => {
             echoes.map((echo) => (
                 <View key={echo.id} style={styles.echoCard}>
                     <View style={styles.userInfoContainer}>
-                        <Image source={{ uri: echo.userImage }} style={styles.userImage} />
+                        <Image source={
+                            echo?.user?.ProfilePicture ? { uri: echo.user.ProfilePicture } : require('../assets/images/user.png')
+                        }
+                        style={styles.userImage} />
                         <View style={styles.userInfo}>
-                            <Text style={styles.userName}>{echo.userName}</Text>
+                            <Text style={styles.userName}>{echo.user?.fullName}</Text>
                         </View>
                     </View>
                     <Text style={styles.echoContent}>{echo.content}</Text>
                     <View style={styles.actionsContainer}>
                         <View style={styles.actionItem}>
-                            <Pressable style={styles.actionButton} onPress={() => navigation.navigate('Conversation', { userId: echo.userId })}>
+                            <Pressable style={styles.actionButton} onPress={() => navigation.navigate('Conversation', { userId: echo.user?._id})}>
                                 <Ionicons name="chatbubble-outline" size={18} color="#777" />
                             </Pressable>
                         </View>
                         <View style={styles.actionItem}>
-                            <Pressable style={styles.actionButton} onPress={() => handleShare(echo.userId, echo.content)}>
+                            <Pressable style={styles.actionButton} onPress={() => handleShare(echo.user._id, echo.content)}>
                                 <MaterialIcons name="share" size={18} color="#777" />
                             </Pressable>
                         </View>
@@ -156,8 +176,10 @@ const Echoes = ({ navigation }) => {
         <View style={{ flex: 1 }}>
             <View style={styles.titleBar}>
                 <Text style={styles.titleText}>Echoes</Text>
-            </View>
-            <ScrollView style={styles.container}>
+            </View><ScrollView
+                style={styles.container}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
                 {renderEchoes()}
             </ScrollView>
         </View>

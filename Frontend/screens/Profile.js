@@ -5,7 +5,8 @@ import {
     View,
     SafeAreaView,
     Image,
-    TouchableOpacity,
+    TouchableOpacity, 
+    Pressable,
     ScrollView,
     Dimensions,
     Alert,
@@ -13,30 +14,28 @@ import {
     Platform,
     Linking,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
+import { useNavigation } from '@react-navigation/native'; 
+import { API_URL} from '@env'
+import axios from 'axios'; 
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { getAccessToken } from '../utilities/keychainUtils';
+import { getAccessToken } from '../utilities/keychainUtils'; 
+
+
 // --- Constants and Data --- (Keep previous dummy data, BASE_URL, PROFILE_API_URL, getAccessToken)
 const dummyProfileData = {
     name: 'Rohan Sharma',
-    bio: 'Tech enthusiast and CSE student passionate about cloud computing and AI. Active in coding, debate, and sustainability initiatives.',
     email: 'aryan.patel@navuni.edu.in',
     degree: 'Bachelor of Technology in Computer Science and Engineering',
     graduationYears: '2021-25',
     profileImageUrl: 'https://via.placeholder.com/150/DDDDDD/808080?text=RS',
 };
 
-const BASE_URL = 'YOUR_API_BASE_URL_HERE';
-const PROFILE_API_URL = ''; // PUT YOUR ACTUAL ENDPOINT HERE
-
-
-
 const Profile = () => {
     const navigation = useNavigation();
     const [profileData, setProfileData] = useState(dummyProfileData);
     const [isLoading, setIsLoading] = useState(true);
-
+    const [profileImage, setProfileImage] = useState('');
     // --- useEffect and fetchProfileData function remain the same ---
     useEffect(() => {
         fetchProfileData();
@@ -45,16 +44,6 @@ const Profile = () => {
     const fetchProfileData = async () => {
         // ... (your existing fetchProfileData function)
         setIsLoading(true);
-
-        if (!PROFILE_API_URL) {
-            console.warn(
-                'PROFILE_API_URL is empty. Skipping API call and using dummy data.',
-            );
-            setIsLoading(false);
-            setProfileData(dummyProfileData);
-            return;
-        }
-
         const token = await getAccessToken();
         if (!token) {
             Alert.alert(
@@ -68,9 +57,7 @@ const Profile = () => {
         }
 
         try {
-            const response = await axios.post(
-                PROFILE_API_URL,
-                {},
+            const response = await axios.get(`${API_URL}/user/profile`,
                 {
                     headers: { Authorization: `Bearer ${token}` },
                     timeout: 10000,
@@ -80,12 +67,12 @@ const Profile = () => {
 
             if (response.status >= 200 && response.status < 300 && response.data) {
                 const fetchedData = response.data.data || response.data;
-                if (fetchedData && fetchedData.name && fetchedData.email) {
+                if (fetchedData && fetchedData.fullName && fetchedData.email) {
                     // console.log("Successfully fetched profile data from API.");
                     setProfileData(prevData => ({
                         ...prevData,
                         profileImageUrl:
-                            fetchedData.profileImageUrl || prevData.profileImageUrl,
+                            fetchedData.ProfilePicture || prevData.ProfilePicture,
                         ...fetchedData,
                     }));
                 } else {
@@ -126,9 +113,7 @@ const Profile = () => {
             { cancelable: true }
         );
     };
-    const handleMessagePress = () =>
-        Alert.alert('Message Request', 'Message request pressed!');
-
+    
     if (isLoading && !profileData.name) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
@@ -137,6 +122,52 @@ const Profile = () => {
             </SafeAreaView>
         );
     }
+    const handleImagePick = async () => {
+        const options = {
+        mediaType: 'photo',
+        quality: 0.7,
+    };
+
+          launchImageLibrary(options, async (response) => {
+            if (response.didCancel) {
+              console.log('Image selection cancelled');
+              return;
+            }
+        
+            const asset = response.assets?.[0];
+            if (!asset) {
+              Alert.alert('Error', 'No image selected');
+              return;
+            }
+        
+            const formData = new FormData();
+            formData.append('ProfilePicture', {
+              uri: asset.uri,
+              name: asset.fileName || 'profile.jpg',
+              type: asset.type,
+            });
+        
+            try {
+              const token = await getAccessToken();
+              const res = await axios.put(`${API_URL}/user/update-profile-picture`, formData, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'multipart/form-data',
+                },
+              });
+          
+              if (res.status === 200) {
+                Alert.alert('Success', 'Profile picture updated');
+                setProfileImage(res.data.profilePictureUrl);
+              } else {
+                Alert.alert('Error', 'Update failed');
+              }
+            } catch (err) {
+              console.error(err);
+              Alert.alert('Upload Error', 'Failed to upload image');
+            }
+          });
+        };
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -160,38 +191,21 @@ const Profile = () => {
                 keyboardShouldPersistTaps="handled">
                 {/* --- Profile Image / Message Button Area (Side by Side) --- */}
                 <View style={styles.profileHeaderArea}>
+                  <View style={styles.profileImageContainer}>
                     <Image
-                        source={{
-                            uri:
-                                profileData.profileImageUrl ||
-                                dummyProfileData.profileImageUrl,
-                        }}
-                        style={styles.profileImage}
-                        onError={e =>
-                            console.warn(
-                                'Failed to load profile image:',
-                                e.nativeEvent.error,
-                            )
-                        }
+                      source={profileData.ProfilePicture ? { uri: profileData.ProfilePicture } : require('../assets/images/user.png')}
+                      style={styles.profileImage}
                     />
-                    <TouchableOpacity
-                        onPress={handleMessagePress}
-                        style={styles.messageButton}>
-                        <Icon
-                            name="send-outline"
-                            size={18}
-                            color="#FFFFFF"
-                            style={styles.messageButtonIcon}
-                        />
-                        <Text style={styles.messageButtonText}>Message</Text>
-                    </TouchableOpacity>
+                    <Pressable style={styles.updateButton} onPress={handleImagePick}>
+                      <Icon name="add-circle-outline" size={28} color="#fff" />
+                    </Pressable>
+                  </View>
                 </View>
-
                 {/* --- Profile Details Below Image/Button Area --- */}
                 <View style={styles.profileDetailsContainer}>
                     {/* Name  */}
                     <Text style={styles.profileName}>
-                        {profileData.name || 'Name Unavailable'}
+                        {profileData.fullName || 'Name Unavailable'}
                     </Text>
 
 
@@ -215,22 +229,24 @@ const Profile = () => {
 
                         {/* Degree */}
                         <View style={styles.infoRow}>
-                            <Icon
-                                name="school-outline"
-                                size={21}
-                                color="#505050"
-                                style={styles.infoIcon}
-                            />
-                            <TouchableOpacity
-                                onPress={() =>
-                                    Alert.alert('Degree Info', profileData.degree)
-                                }>
-                                <Text style={[styles.infoText, styles.linkText]}>
-                                    {profileData.degree || 'Degree not specified'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-
+                        <Icon
+                            name="school-outline"
+                            size={21}
+                            color="#505050"
+                            style={styles.infoIcon}
+                        />
+                        <TouchableOpacity
+                        onPress={() =>
+                        Alert.alert(
+                                'Program & Course Info',
+                                `Program: ${profileData.program || 'Not specified'}\nCourse: ${profileData.course || 'Not specified'}`
+                         )
+                      }>
+                        <Text style={[styles.infoText, styles.linkText]}>
+                            {profileData.program || 'Program not specified'} / {profileData.course || 'Course not specified'}
+                        </Text>
+                    </TouchableOpacity>
+                    </View>
                         {/* Graduation Years */}
                         <View style={styles.infoRow}>
                             <Icon
@@ -240,7 +256,7 @@ const Profile = () => {
                                 style={styles.infoIcon}
                             />
                             <Text style={styles.infoText}>
-                                {profileData.graduationYears || 'Years not specified'}
+                                {profileData.enrollmentYear || 'Year not specified'}
                             </Text>
                         </View>
                     </View>
@@ -252,11 +268,37 @@ const Profile = () => {
 
 // --- Styles --- (Keep your existing styles)
 const { width } = Dimensions.get('window');
-const PROFILE_IMAGE_SIZE = 100;
-const PROFILE_IMAGE_BORDER = 3;
-const MESSAGE_BUTTON_HEIGHT = 40;
+const PROFILE_IMAGE_SIZE = 125;
+const PROFILE_IMAGE_BORDER = 0;
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create({ 
+      profileImageContainer: {
+      position: 'relative',
+      width: PROFILE_IMAGE_SIZE,
+      height: PROFILE_IMAGE_SIZE,
+      borderRadius: PROFILE_IMAGE_SIZE / 2,
+      overflow: 'visible',
+      borderWidth: PROFILE_IMAGE_BORDER,
+      borderColor: '#FFFFFF',
+      backgroundColor: '#E0E0E0',
+      marginBottom: 8, 
+      zIndex:0,
+    },
+  updateButton: {
+  position: 'absolute',
+  bottom: 0,
+  right: 0,
+  backgroundColor: 'rgba(229, 57, 53, 0.85)', // semi-transparent red
+  borderRadius: 16,
+  padding: 2,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.3,
+  shadowRadius: 2,
+  elevation: 3,
+  zIndex:1,
+},
+
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',

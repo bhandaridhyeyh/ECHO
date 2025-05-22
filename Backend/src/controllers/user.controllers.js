@@ -61,7 +61,8 @@ const sendotp = asyncHandler(async (req, res) => {
     text: `Your OTP is: ${otp}`,
   }
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions); 
+    console.log(otpStore)
     return res.status(200).json(new ApiResponse(201, null, "Email sent successfully"));
   } catch (error) {
     console.log(error);
@@ -72,19 +73,22 @@ const sendotp = asyncHandler(async (req, res) => {
 const registerUser = asyncHandler(async (req, res) => {  
   const { email, otp } = req.body 
 
-  if (!record || Date.now() > record.expiresAt) {
+  if (!otpStore || Date.now() > otpStore.expiresAt) {
     throw new apiError(401,"OTP expired or invalid.");
-  }
-  if (parseInt(otp) !== record.otp) {
+  } 
+  console.log(otpStore) 
+  if (parseInt(otp) !== otpStore[email]?.otp)
+  { 
+    console.log(parseInt(otp),otpStore.otp, parseInt(otp) !== otpStore.otp)
     throw new apiError(402, "Wrong OTP.");
   }
 
   // const a = email.split("@") 
 
   // const fullName = a[0].replace(/\./g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) 
-
-  const user = await User.create({ email, password})  
-
+  const password = otpStore[email]?.password
+  const user = await User.create({ email,password })  
+  
   const { accessToken, refreshToken } = await genrateAccessTokenandRefreshToken(user._id);
   
   const options = {
@@ -92,14 +96,14 @@ const registerUser = asyncHandler(async (req, res) => {
         httpsOnly: true,
         secure: true,
     }; 
-    const userCreated = await User.findById(user._id).select("-password -refreshToken")
-    if (!userCreated) {  
+  const userCreated = await User.findById(user._id).select("-password -refreshToken")
+  if (!userCreated) {  
             throw new apiError(500,"something went wrong while registering the user") 
-    }
-    return res.status(201) 
+  }
+  return res.status(200) 
     .cookie("accessToken", accessToken, options)
     .cookie("refreshToken", refreshToken, options)
-    .json(new ApiResponse(201,{
+    .json(new ApiResponse(200,{
         userCreated,
         accessToken,
         refreshToken,
@@ -151,23 +155,25 @@ const updateUserProfilePicture = asyncHandler(async (req, res) => {
     if (!ProfilePicturelocalpath) {
       throw new apiError(400, "ProfilePIcture is required !");
     }
-  const ProfilePicture = await UploadOnCloud(ProfilePicturelocalpath);
+  const ProfilePictureCloud = await UploadOnCloud(ProfilePicturelocalpath);
   
-  if (!ProfilePicture) {
-      throw new apiError(400, "ProfilePicture is required !");
+  if (!ProfilePictureCloud) {
+      throw new apiError(500, "Failed to upload the Cloud !");
     } 
-    
-const user = await User.findByIdAndUpdate(req.user?._id,{ $set: { ProfilePicture:ProfilePicture} }, { new: true } ).select('ProfilePicture')  
-if (!user) {
-  throw new apiError(404, "User not found");
-}
+  const Pp_url = ProfilePictureCloud.secure_url || ProfilePictureCloud.url 
+  const user = await User.findByIdAndUpdate(req.user?._id,{ $set: { ProfilePicture:Pp_url } }, { new: true } ).select('ProfilePicture')  
+  if (!user) {
+   throw new apiError(404, "User not found");
+  }
 return res
   .status(200)
   .json(new ApiResponse(201, user, "Profile Picture Updated successfully!"));
   }
-  catch (error) {  
-  throw new apiError(402, "something went wrong during changing email");
-}}); 
+ catch (error) {
+  console.error("Update profile picture error:", error);
+  throw new apiError(500, error.message || "Something went wrong while updating profile picture");
+  }
+}); 
 
 const loginUser = asyncHandler(async (req, res) => {
         // get details username and password thorugh req.body
@@ -243,16 +249,11 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 const GetUserProfile = asyncHandler(async (req, res) => {  
   // to get all user detailes and user's sell posts 
-  const user = User.findById(req.user?._id).select("-password -refreshToken").populate('userSellpost').exec((err, user) => {  
-    if (err) {  
-      throw new apiError(501,err)
-    } 
-    console.log(user)
-  })  
+  const user = await User.findById(req.user?._id).select("-password -refreshToken").populate('userSellpost')    
   if (!user) { 
     throw new apiError(404,"User not Found !") 
   }  
-  return res.status(200).json(new ApiResponse(201,))
+  return res.status(200).json(new ApiResponse(200,user,"user Found SuccessFully !"))
 })
 
 const updateAccountDetails = asyncHandler(async (req, res) => {

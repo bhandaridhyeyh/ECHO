@@ -1,65 +1,113 @@
 import { useNavigation } from '@react-navigation/native';
-import * as React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Image, Pressable, TextInput, Dimensions } from 'react-native';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native'; 
+import { API_URL} from '@env' 
+import axios from 'axios';
+import { getAccessToken,getCurrentUserId } from '../utilities/keychainUtils';  
 
 const BuyingChats = () => {
-  const navigation = useNavigation();
+  const [chats, setChats] = useState([]); 
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const navigation = useNavigation();  
   const screenWidth = Dimensions.get('window').width;
-
+  useEffect(() => {
+    const fetchChats = async () => {
+      try { 
+        const currentUserId = await getCurrentUserId(); 
+        setCurrentUserId(currentUserId);
+        const token = await getAccessToken();
+        if (!token) {
+            Alert.alert('Authentication Required', 'Please log in to post an item.');
+            navigation.navigate('Login');
+            return;
+        }
+        const res = await axios.get(`${API_URL}/Chat/all`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            }
+          }
+        ); 
+        setChats(Array.isArray(res.data.data) ? res.data.data : []);
+      } catch (err) {
+        console.error('Error fetching chats:', err);
+      }
+    };
+    fetchChats();
+  }, []); 
+  
   return (
-    <SafeAreaView style={{ backgroundColor: 'white', flex: 1 }}>
-      <Text style={styles.heading}>Chats</Text>
-      <View style={styles.header}>
-        <Pressable style={{ width: '100%', alignItems: 'center' }}>
-          <View style={[styles.searchbar, { width: screenWidth * 0.9 }]}>
-            <Image source={require('../assets/icons/icons8-search-24.png')} style={styles.searchIcon} />
-            <TextInput placeholder='Search from your chats' placeholderTextColor={"#555"} style={[styles.searchInput, { width: '85%' }]} />
-          </View>
-        </Pressable>
-      </View>
-      <View style={styles.details}>
-        <Pressable onPress={() => navigation.navigate('Conversation')}>
-          <View style={[styles.chat, { width: screenWidth * 0.95 }]}>
-            <Image source={require('../assets/icons/icons8-male-user-50.png')} style={styles.chatImage} />
-            <Text style={[styles.chatText, { width: '60%' }]}>
-              <Text style={styles.boldText}>Namrata Kaur</Text>
-              {'\n'}
-              <Text>SY - BBA</Text>
-            </Text>
-            <Text style={styles.chatTime}>07/10/24</Text>
-          </View>
-        </Pressable>
-        <View style={[styles.separator, { width: screenWidth * 0.9 }]} />
-        <Pressable onPress={() => navigation.navigate('Conversation')}>
-          <View style={[styles.chat, { width: screenWidth * 0.95 }]}>
-            <Image source={require('../assets/icons/icons8-male-user-50.png')} style={styles.chatImage} />
-            <Text style={[styles.chatText, { width: '60%' }]}>
-              <Text style={styles.boldText}>Ishita Amin</Text>
-              {'\n'}
-              <Text>TY - B.Tech CSE</Text>
-            </Text>
-            <Text style={styles.chatTime}>05/10/24</Text>
-          </View>
-        </Pressable>
-        <View style={[styles.separator, { width: screenWidth * 0.9 }]} />
-        <Pressable onPress={() => navigation.navigate('Conversation')}>
-          <View style={[styles.chat, { width: screenWidth * 0.95 }]}>
-            <Image source={require('../assets/icons/icons8-male-user-50.png')} style={styles.chatImage} />
-            <Text style={[styles.chatText, { width: '60%' }]}>
-              <Text style={styles.boldText}>Sandra Maria Wilson</Text>
-              {'\n'}
-              <Text>TY - B.Sc Data Science</Text>
-            </Text>
-            <Text style={styles.chatTime}>30/09/24</Text>
-          </View>
-        </Pressable>
-      </View>
-    </SafeAreaView>
-  );
-};
+  <SafeAreaView style={{ backgroundColor: 'white', flex: 1 }}>
+    <Text style={styles.heading}>Chats</Text>
+    <View style={styles.header}>
+      <Pressable style={{ width: '100%', alignItems: 'center' }}>
+        <View style={[styles.searchbar, { width: screenWidth * 0.9 }]}>
+          <Image
+            source={require('../assets/icons/icons8-search-24.png')}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            placeholder="Search from your chats"
+            placeholderTextColor="#555"
+            style={[styles.searchInput, { width: '85%' }]}
+          />
+        </View>
+      </Pressable>
+    </View>
 
+    <View style={styles.details}>
+      {chats.length === 0 ? (
+        <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
+          No chats found.
+        </Text>
+      ) : (
+        chats.map((chat, idx) => {
+          const otherUser = chat.participants.find(p => p._id !== currentUserId);
+          return (
+            <React.Fragment key={chat._id || idx}>
+              <Pressable
+                onPress={() =>
+                  navigation.navigate('Conversation', {
+                    chatId: chat._id, chat,
+                    receiverId: otherUser._id,
+                    receiverName: otherUser.fullName,
+                    receiverDetails: `${otherUser.course} - ${otherUser.program}`,
+                    receiverImage: typeof otherUser?.ProfilePicture === 'string' ? otherUser.ProfilePicture : null,
+                  })
+                }
+              >
+                <View style={[styles.chat, { width: screenWidth * 0.95 }]}>
+                  <Image
+                    source={
+                      otherUser?.ProfilePicture
+                        ? { uri: otherUser.ProfilePicture }
+                        : require('../assets/images/user.png')
+                    }
+                    style={styles.chatImage}
+                  />
+                  <View style={{ marginLeft: 12, width: '60%', justifyContent: 'center' }}>
+                      <Text style={{ color: 'black', fontWeight: 'bold', fontSize:18 }}>
+                        {otherUser?.fullName || 'Unknown User'}
+                      </Text>
+                      <Text style={{ color: 'black' }}>
+                        {otherUser?.course} - {otherUser?.program}
+                      </Text>
+                    </View>
+                </View>
+              </Pressable>
+              {idx < chats.length - 1 && (
+                <View style={[styles.separator, { width: screenWidth * 0.9 }]} />
+              )}
+            </React.Fragment>
+          );
+        })
+      )}
+    </View>
+  </SafeAreaView>
+);
+};
 const SellingChats = () => {
   const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;

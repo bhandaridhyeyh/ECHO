@@ -4,6 +4,7 @@
   "description": "This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).",
   "main": "index.js",
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/native-stack": "^7.3.10",
     "abort-controller": "^3.0.0",
@@ -312,6 +313,7 @@
     "json5": "^2.2.3",
     "jsonfile": "^4.0.0",
     "jsx-ast-utils": "^3.3.5",
+    "jwt-decode": "^4.0.0",
     "keyv": "^4.5.4",
     "kind-of": "^6.0.3",
     "kleur": "^3.0.3",
@@ -424,6 +426,7 @@
     "react-freeze": "^1.0.4",
     "react-is": "^18.3.1",
     "react-native": "^0.75.5",
+    "react-native-dotenv": "^3.4.11",
     "react-native-element-dropdown": "^2.12.1",
     "react-native-floating-action": "^1.22.0",
     "react-native-gesture-handler": "^2.19.0",

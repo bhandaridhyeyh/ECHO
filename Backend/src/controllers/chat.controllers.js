@@ -8,29 +8,38 @@ import ApiResponse from "../utils/apiResponse.js";
 const users = {} 
 
 const CreatChat = asyncHandler(async (req, res) => {
-    const { participant_id1, participant_id2 } = req.body
-    if (!participant_id1 || !participant_id2 || participant_id1 === participant_id2) {  
-        throw new apiError(404, "Invalid participants: IDs are missing or both are the same.")
+  const { participant_id1, participant_id2 } = req.body;
+
+  if (!participant_id1 || !participant_id2 || participant_id1 === participant_id2) {
+    throw new apiError(404, "Invalid participants: IDs are missing or both are the same.");
     } 
-    const p1 = await User.findById(participant_id1) 
-    const p2 = await User.findById(participant_id2) 
-    if (!p1 || !p2) {  
-        throw new apiError(404,"User not found to the Database")
-    }   
-    let chat = await Chat.findOne({ participants: { $all: [participant_id1, participant_id2] } }); 
-    if (chat) {
-        return res.status(203).json(new ApiResponse(202, chat, "Found and already existing Chat !"))
+  console.log(participant_id1, participant_id2)
+  const p1 = await User.findById(participant_id1);
+  const p2 = await User.findById(participant_id2);
+  if (!p1 || !p2) {
+    throw new apiError(404, "User not found in the Database");
+  }
+
+  // Sort participant IDs before querying/creating
+  const participantsSorted = [participant_id1, participant_id2].sort();
+
+  // Find chat with sorted participants
+  let chat = await Chat.findOne({ participants: participantsSorted });
+
+  if (chat) {
+    return res.status(200).json(new ApiResponse(200, chat, "Found existing chat!"));
+  }
+  else {
+    chat = await Chat.create({ participants: participantsSorted });
+    if (!chat) {
+      throw new apiError(501, "Failed to Create the Chat!");
     }
-    else {
-        chat = await Chat.create({ participants: [participant_id1, participant_id2] }) 
-        if (!chat) { 
-            throw new apiError(501,"Failed to Create the Chat !")
-        } 
-        return res.status(201).json(201,chat,"Succesfully Created the Chat")
-    }
-})  
+    return res.status(201).json(new ApiResponse(201, chat, "Successfully Created the Chat"));
+  }
+});
+
 const GetAllUserChats = asyncHandler(async (req, res) => {  
-    const userId = req.params  
+    const userId = req.user?._id
     if (!userId) {  
         throw new apiError(404, "userId Not Found !") 
     }
@@ -118,4 +127,4 @@ const socketHandler = (io) => {
         })
     })}
 
-export {socketHandler,CreatChat}
+export {socketHandler,CreatChat, GetAllUserChats,}

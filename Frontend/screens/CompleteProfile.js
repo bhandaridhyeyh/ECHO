@@ -32,7 +32,7 @@ const CompleteProfile = () => {
                 return;
             }
 
-            const response = await axios.put('http://192.168.19.29:3600/user/complete-profile', { // Replace with your actual endpoint
+            const response = await axios.put('http://192.168.19.207:3600/user/complete-profile', { // Replace with your actual endpoint
                 enrollmentYear,
                 university,
                 course,

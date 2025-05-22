@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import { API_URL } from '@env';
 import axios from 'axios';
 
 const Register = () => {
@@ -33,7 +34,7 @@ const Register = () => {
 
     try {
       const response = await axios.post(
-        'http://192.168.19.29:3600/user/register',
+        `${API_URL}/user/sendotp`,
         {
           email,
           password,

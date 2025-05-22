@@ -5,12 +5,9 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
+import { API_URL} from '@env'
 import Icon from 'react-native-vector-icons/Ionicons'; // For back arrow
 import { ActivityIndicator } from 'react-native';
-
-// const BASE_URL = 'http://localhost:5000'; // Replace with your actual backend URL
-const BASE_URL = 'YOUR_BACKEND_URL'; // Replace with your actual backend URL
-
 
 const Otp = () => {
     const navigation = useNavigation();
@@ -44,7 +41,7 @@ const Otp = () => {
         }
 
         try {
-            const response = await axios.post(`${BASE_URL}/api/auth/verify-otp`, {
+            const response = await axios.post(`${API_URL}/user/register`, {
                 email,
                 otp,
             });
