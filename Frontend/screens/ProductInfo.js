@@ -17,7 +17,10 @@ import {
 import React, {useState, useEffect} from 'react';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {launchCamera} from 'react-native-image-picker';
-import {useWindowDimensions} from 'react-native';
+import { useWindowDimensions } from 'react-native'; 
+import { getCurrentUserId, getAccessToken } from '../utilities/keychainUtils';
+import axios from 'axios'; 
+import { API_URL } from '@env' 
 
 const ProductInfo = () => {
   const navigation = useNavigation();
@@ -25,6 +28,39 @@ const ProductInfo = () => {
   const {product} = route.params; // Extract product from route parameters
   const {width: screenWidth} = useWindowDimensions();
   const [imageUri, setImageUri] = useState(null);
+  
+  const handleChatPress = async () => {
+    try { 
+    const token = await getAccessToken();
+        if (!token) {
+            Alert.alert('Authentication Required', 'Please log in to post an item.');
+            navigation.navigate('Login');
+            return;
+    }
+    const participant_id1 = await getCurrentUserId();
+    const participant_id2 = product.seller._id;
+
+    const response = await axios.post(`${API_URL}/Chat/create`, {
+      participant_id1,
+      participant_id2,
+    }, {
+      headers: {
+         Authorization: `Bearer ${token}`,
+      },
+    });
+
+    console.log('Chat created:', response.data.data);
+      navigation.navigate('Conversation', {
+        chatId: response.data.data._id, 
+        receiverId: participant_id2,
+        receiverName: product.seller.fullName,
+        receiverDetails: `${product.seller.course} - ${product.seller.program}`,
+        receiverImage: typeof product.seller?.ProfilePicture === 'string' ? product.seller.ProfilePicture : null,
+      });
+  } catch (error) {
+    console.error('Error creating chat:', error);
+  }
+};
 
   // Use the product data to determine the image source
   // Assuming your product object has an 'Productpicture' property which is the URI
@@ -254,14 +290,17 @@ const ProductInfo = () => {
             Posted by:
           </Text>
           <View style={styles.postedByContainer}>
-            <Image
-              source={require('../assets/icons/icons8-male-user-50.png')}
+            <Image 
+              style={{ width: 40, height: 40, borderRadius: 20 }}
+              source={product.seller.ProfilePicture
+                ? {uri:product.seller.ProfilePicture}
+                : require('../assets/images/user.png')
+              }
             />
             <Text style={styles.postedByText}>
-              <Text style={{fontWeight: 'bold'}}>Namrata Kaur</Text>
-              {'\n'}SY - BBA
+              <Text style={{ fontWeight: 'bold' }}>{product?.seller.fullName}</Text>
+              {'\n'}{product?.seller.course} - {product.seller.program}
             </Text>
-            <Image source={require('../assets/icons/icons8-forward-24.png')} />
           </View>
           {/* Display the formatted creation date */}
         </View>
@@ -269,7 +308,7 @@ const ProductInfo = () => {
       <View style={styles.footer}>
         <Pressable
           style={styles.footerButton}
-          onPress={() => navigation.navigate('Conversation')}>
+          onPress={handleChatPress}>
           <Text style={styles.footerButtonText}>CHAT</Text>
         </Pressable>
         <Pressable style={styles.footerButton} onPress={makeCall}>

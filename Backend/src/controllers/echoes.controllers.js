@@ -21,7 +21,7 @@ const CreatThread = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201,thread,"successfully created the thread !"))
 }) 
 const GetallThread = asyncHandler(async (req , res) => { 
-    const threads = await Thread.find().populate('user', 'fullName ProfilePicture').sort({ createdAt: -1 });
+    const threads = await Thread.find().populate('user', 'fullName ProfilePicture course program').sort({ createdAt: -1 });
     if (!threads) {  
         throw new apiError(401,"threads not Found !")
     }  

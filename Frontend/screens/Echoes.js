@@ -5,15 +5,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { API_URL } from '@env'   
 import { RefreshControl } from 'react-native';
-import { getAccessToken } from '../utilities/keychainUtils'; 
+import { getAccessToken,getCurrentUserId } from '../utilities/keychainUtils'; 
  
 const Echoes = ({ navigation, route }) => {
     const [echoes, setEchoes] = useState([]); 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
-   
-
+      
     // Dummy data for fallback
     const dummyEchoes = [
         {
@@ -114,9 +113,38 @@ const fetchEchoes = async () => {
             alert(error.message);
         }
         console.log('Sharing echo with user ID:', userId);
-        // navigation.navigate('Conversation', { userId }); // Removed navigation.  The message icon will handle this.
+        };
+    const handleChatPress = async(echo) => {
+        try { 
+        const token = await getAccessToken();
+            if (!token) {
+                Alert.alert('Authentication Required', 'Please log in to post an item.');
+                navigation.navigate('Login');
+                return;
+        }
+        const participant_id1 = await getCurrentUserId();
+        const participant_id2 = echo.user._id;
+    
+        const response = await axios.post(`${API_URL}/Chat/create`, {
+          participant_id1,
+          participant_id2,
+        }, {
+          headers: {
+             Authorization: `Bearer ${token}`,
+          },
+        });
+        console.log('Chat created:', response.data.data);
+          navigation.navigate('Conversation', {
+            chatId: response.data.data._id, 
+            receiverId: participant_id2,
+            receiverName: echo.user.fullName,
+            receiverDetails: `${echo.user.course} - ${echo.user.program}`,
+            receiverImage: typeof echo.user?.ProfilePicture === 'string' ? echo.user.ProfilePicture : null,
+          });
+      } catch (error) {
+        console.error('Error creating chat:', error);
+      }
     };
-
     const renderEchoes = () => {
         if (loading) {
             return (
@@ -157,7 +185,7 @@ const fetchEchoes = async () => {
                     <Text style={styles.echoContent}>{echo.content}</Text>
                     <View style={styles.actionsContainer}>
                         <View style={styles.actionItem}>
-                            <Pressable style={styles.actionButton} onPress={() => navigation.navigate('Conversation', { userId: echo.user?._id})}>
+                            <Pressable style={styles.actionButton} onPress={() => handleChatPress(echo)}>
                                 <Ionicons name="chatbubble-outline" size={18} color="#777" />
                             </Pressable>
                         </View>
