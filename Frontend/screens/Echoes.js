@@ -77,7 +77,7 @@ const fetchEchoes = async () => {
             Alert.alert("Warning", "Empty or invalid data from server. Using dummy data.");
         }
     } catch (err) {
-        setError(err.message || 'An unexpected error occurred');
+        console.log('Error:', JSON.stringify(error, null, 2));
         setEchoes(dummyEchoes);
         Alert.alert("Error", "Failed to load echoes. Using dummy data.");
     } finally {
@@ -110,7 +110,7 @@ const fetchEchoes = async () => {
                 console.log("Share dismissed")
             }
         } catch (error) {
-            alert(error.message);
+            Alert.alert(error.message);
         }
         console.log('Sharing echo with user ID:', userId);
         };
@@ -172,7 +172,7 @@ const fetchEchoes = async () => {
 
         return (
             echoes.map((echo) => (
-                <View key={echo.id} style={styles.echoCard}>
+                <View key={echo._id ? echo._id.toString() : echo.id ? echo.id.toString() : `echo-${index}`} style={styles.echoCard}>
                     <View style={styles.userInfoContainer}>
                         <Image source={
                             echo?.user?.ProfilePicture ? { uri: echo.user.ProfilePicture } : require('../assets/images/user.png')

@@ -1,113 +1,137 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Image, Pressable, TextInput, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Image, Pressable, TextInput, Dimensions, LogBox, Alert } from 'react-native';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { useWindowDimensions } from 'react-native'; 
-import { API_URL} from '@env' 
+import { API_URL } from '@env';
 import axios from 'axios';
-import { getAccessToken,getCurrentUserId } from '../utilities/keychainUtils';  
+import { getAccessToken, getCurrentUserId } from '../utilities/keychainUtils';
+
+LogBox.ignoreLogs([
+  'A props object containing a "key" prop is being spread into JSX',
+]);
 
 const BuyingChats = () => {
-  const [chats, setChats] = useState([]); 
+  const [chats, setChats] = useState([]);
+  const [filteredChats, setFilteredChats] = useState([]);
+  const [searchText, setSearchText] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
-  const navigation = useNavigation();  
+  const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;
+
   useEffect(() => {
     const fetchChats = async () => {
-      try { 
-        const currentUserId = await getCurrentUserId(); 
+      try {
+        const currentUserId = await getCurrentUserId();
         setCurrentUserId(currentUserId);
         const token = await getAccessToken();
         if (!token) {
-            Alert.alert('Authentication Required', 'Please log in to post an item.');
-            navigation.navigate('Login');
-            return;
+          Alert.alert('Authentication Required', 'Please log in to post an item.');
+          navigation.navigate('Login');
+          return;
         }
-        const res = await axios.get(`${API_URL}/Chat/all`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            }
+        const res = await axios.get(`${API_URL}/Chat/all`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           }
-        ); 
-        setChats(Array.isArray(res.data.data) ? res.data.data : []);
+        });
+        const data = Array.isArray(res.data.data) ? res.data.data : [];
+        setChats(data);
+        setFilteredChats(data);
       } catch (err) {
-        console.error('Error fetching chats:', err);
+        console.log('Error fetching chats:', JSON.stringify(err, null, 2));
       }
     };
     fetchChats();
-  }, []); 
-  
-  return (
-  <SafeAreaView style={{ backgroundColor: 'white', flex: 1 }}>
-    <Text style={styles.heading}>Chats</Text>
-    <View style={styles.header}>
-      <Pressable style={{ width: '100%', alignItems: 'center' }}>
-        <View style={[styles.searchbar, { width: screenWidth * 0.9 }]}>
-          <Image
-            source={require('../assets/icons/icons8-search-24.png')}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            placeholder="Search from your chats"
-            placeholderTextColor="#555"
-            style={[styles.searchInput, { width: '85%' }]}
-          />
-        </View>
-      </Pressable>
-    </View>
+  }, []);
 
-    <View style={styles.details}>
-      {chats.length === 0 ? (
-        <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
-          No chats found.
-        </Text>
-      ) : (
-        chats.map((chat, idx) => {
-          const otherUser = chat.participants.find(p => p._id !== currentUserId);
-          return (
-            <React.Fragment key={chat._id || idx}>
-              <Pressable
-                onPress={() =>
-                  navigation.navigate('Conversation', {
-                    chatId: chat._id, chat,
-                    receiverId: otherUser._id,
-                    receiverName: otherUser.fullName,
-                    receiverDetails: `${otherUser.course} - ${otherUser.program}`,
-                    receiverImage: typeof otherUser?.ProfilePicture === 'string' ? otherUser.ProfilePicture : null,
-                  })
-                }
-              >
-                <View style={[styles.chat, { width: screenWidth * 0.95 }]}>
-                  <Image
-                    source={
-                      otherUser?.ProfilePicture
-                        ? { uri: otherUser.ProfilePicture }
-                        : require('../assets/images/user.png')
-                    }
-                    style={styles.chatImage}
-                  />
-                  <View style={{ marginLeft: 12, width: '60%', justifyContent: 'center' }}>
-                      <Text style={{ color: 'black', fontWeight: 'bold', fontSize:18 }}>
+  const handleSearch = (text) => {
+    setSearchText(text);
+    if (text.trim() === '') {
+      setFilteredChats(chats);
+    } else {
+      const filtered = chats.filter(chat => {
+        const otherUser = chat.participants.find(p => p._id !== currentUserId);
+        return otherUser?.fullName?.toLowerCase().includes(text.toLowerCase());
+      });
+      setFilteredChats(filtered);
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ backgroundColor: 'white', flex: 1 }}>
+      <Text style={styles.heading}>Chats</Text>
+      <View style={styles.header}>
+        <Pressable style={{ width: '100%', alignItems: 'center' }}>
+          <View style={[styles.searchbar, { width: screenWidth * 0.9 }]}>
+            <Image
+              source={require('../assets/icons/icons8-search-24.png')}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              placeholder="Search from your chats"
+              placeholderTextColor="#555"
+              style={[styles.searchInput, { width: '85%' }]}
+              value={searchText}
+              onChangeText={handleSearch}
+            />
+          </View>
+        </Pressable>
+      </View>
+
+      <View style={styles.details}>
+        {filteredChats.length === 0 ? (
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
+            No chats found.
+          </Text>
+        ) : (
+          filteredChats.map((chat, idx) => {
+            const otherUser = chat.participants.find(p => p._id !== currentUserId);
+            return (
+              <React.Fragment key={chat._id || idx}>
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate('Conversation', {
+                      chatId: chat._id,
+                      chat,
+                      receiverId: otherUser._id,
+                      receiverName: otherUser.fullName,
+                      receiverDetails: `${otherUser.course} - ${otherUser.program}`,
+                      receiverImage: typeof otherUser?.ProfilePicture === 'string' ? otherUser.ProfilePicture : null,
+                    })
+                  }
+                >
+                  <View style={[styles.chat, { width: screenWidth * 0.95 }]}>
+                    <Image
+                      source={
+                        otherUser?.ProfilePicture
+                          ? { uri: otherUser.ProfilePicture }
+                          : require('../assets/images/user.png')
+                      }
+                      style={styles.chatImage}
+                    />
+                    <View style={{ marginLeft: 12, width: '60%', justifyContent: 'center' }}>
+                      <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 18 }}>
                         {otherUser?.fullName || 'Unknown User'}
                       </Text>
                       <Text style={{ color: 'black' }}>
                         {otherUser?.course} - {otherUser?.program}
                       </Text>
                     </View>
-                </View>
-              </Pressable>
-              {idx < chats.length - 1 && (
-                <View style={[styles.separator, { width: screenWidth * 0.9 }]} />
-              )}
-            </React.Fragment>
-          );
-        })
-      )}
-    </View>
-  </SafeAreaView>
-);
+                  </View>
+                </Pressable>
+                {idx < filteredChats.length - 1 && (
+                  <View style={[styles.separator, { width: screenWidth * 0.9 }]} />
+                )}
+              </React.Fragment>
+            );
+          })
+        )}
+      </View>
+    </SafeAreaView>
+  );
 };
+
 const SellingChats = () => {
   const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;
@@ -123,7 +147,6 @@ const SellingChats = () => {
   );
 };
 
-// Scene map for TabView
 const renderScene = SceneMap({
   buying: BuyingChats,
   selling: SellingChats,
@@ -142,7 +165,7 @@ const renderTabBar = (props) => (
 
 export default function ChatTabs() {
   const screenWidth = Dimensions.get('window').width;
-  const [index, setIndex] = React.useState(0); // Current tab index
+  const [index, setIndex] = React.useState(0);
   const [routes] = React.useState([
     { key: 'buying', title: 'Buying' },
     { key: 'selling', title: 'Selling' },
@@ -236,18 +259,6 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     resizeMode: 'contain',
-  },
-  chatText: {
-    color: 'black',
-    fontSize: 17,
-  },
-  boldText: {
-    fontWeight: 'bold',
-  },
-  chatTime: {
-    color: 'grey',
-    fontSize: 14,
-    marginLeft: 'auto',
   },
   separator: {
     height: 0.5,

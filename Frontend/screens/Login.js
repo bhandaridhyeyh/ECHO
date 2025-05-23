@@ -1,26 +1,31 @@
-import { StyleSheet, Text, View, SafeAreaView, Image, KeyboardAvoidingView, TextInput, Pressable, Alert, ScrollView, Dimensions } from 'react-native';
-import React, { useState } from 'react';
+import { StyleSheet, Text, View, SafeAreaView, Image, KeyboardAvoidingView, TextInput, Pressable, Alert, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useState, useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';  
 import { API_URL } from '@env' 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storeAccessToken } from '../utilities/keychainUtils'; // Import the storeAccessToken function
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const { width, height } = Dimensions.get('window');
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+  const scrollViewRef = useRef(null);
+
   // Replace this with your backend API URL
 
   const SignIn = async () => {
+    setLoading(true);
     try {
       const response = await axios.post(`${API_URL}/user/login`, { // Adjust the endpoint if necessary
         email: email,
         password: password,
       });
 
-      // Assuming your backend sends back user data and tokens upon successful login
       if (response.status === 200) {
         const { accessToken, userObject } = response.data.data; // Adjust based on your actual response structure
 
@@ -36,28 +41,24 @@ const Login = () => {
           Alert.alert("Error", "Failed to securely store the access token. Please try again.");
         }
       } else {
-        // Handle other successful status codes if needed (though 200 is typical for success)
         Alert.alert("Login Failed", "Invalid credentials.");
       }
 
     } catch (error) {
-      console.error("Login Error:", error);
+      console.log('Login Error:', JSON.stringify(error, null, 2));
       let errorMessage = "Something went wrong. Please try again.";
-      if (error.response && error.response.data && error.response.data.message) {
+      if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
-      } else if (error.request) {
-        // errorMessage = "Network error. Please check your internet connection.";
-        console.log(error.request);
-        console.log("Error Details:", error);
-
       }
       Alert.alert("Login Failed", errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent} keyboardShouldPersistTaps="handled">
         <View style={styles.logoContainer}>
           <Image
             style={styles.logoImage}
@@ -72,25 +73,43 @@ const Login = () => {
 
           <View style={styles.inputContainer}>
             <View style={styles.mail}>
-              <Image source={require('../assets/icons/icons8-email-28.png')} style={styles.icon} />
+              <Icon name="mail-outline" size={24} color="#555" style={styles.icon} />
               <TextInput
                 value={email}
                 onChangeText={(text) => setEmail(text)}
+                onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
                 placeholder='E - Mail' placeholderTextColor={"#555"} style={styles.input} />
             </View>
             <View style={styles.pw}>
-              <Image source={require('../assets/icons/icons8-lock-28.png')} style={styles.icon} />
+              <Icon name="lock-closed-outline" size={24} color="#555" style={styles.icon} />
               <TextInput
                 value={password}
                 onChangeText={(text) => setPassword(text)}
-                secureTextEntry={true}
-                placeholder='Password' placeholderTextColor={"#555"} style={styles.input} />
+                onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                secureTextEntry={!showPassword}
+                placeholder='Password'
+                placeholderTextColor={"#555"}
+                style={styles.input}
+              />
+              <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10}>
+                <Icon
+                  name={showPassword ? 'eye' : 'eye-off'}
+                  size={24}
+                  color="#555"
+                  style={styles.eyeIcon}
+                />
+              </Pressable>
             </View>
+
             <Text style={styles.forgotPW}>Forgot Password?</Text>
           </View>
 
-          <Pressable onPress={SignIn} style={styles.btn}>
-            <Image source={require('../assets/icons/icons8-arrow-50.png')} style={styles.btnIcon} />
+          <Pressable onPress={SignIn} style={styles.btn} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Image source={require('../assets/icons/icons8-arrow-50.png')} style={styles.btnIcon} />
+            )}
           </Pressable>
           <Pressable onPress={() => navigation.navigate("Register")}>
             <Text style={styles.signUpText}>Don't have an account? Sign Up</Text>

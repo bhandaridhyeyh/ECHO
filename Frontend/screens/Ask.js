@@ -65,7 +65,7 @@ const Ask = () => {
       }
     }
     catch (error) { 
-      console.error("Error posting:", error);
+      console.log('Error Posting:', JSON.stringify(error, null, 2));
       Alert.alert("Error", "Failed to post. Please try again.");
      }
   };
