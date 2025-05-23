@@ -5,24 +5,22 @@ import {
     View,
     SafeAreaView,
     Image,
-    TouchableOpacity, 
+    TouchableOpacity,
     Pressable,
     ScrollView,
     Dimensions,
     Alert,
     ActivityIndicator,
     Platform,
-    Linking,
+    FlatList,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native'; 
-import { API_URL} from '@env'
-import axios from 'axios'; 
+import { useNavigation } from '@react-navigation/native';
+import { API_URL } from '@env'
+import axios from 'axios';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { getAccessToken } from '../utilities/keychainUtils'; 
+import { getAccessToken } from '../utilities/keychainUtils';
 
-
-// --- Constants and Data --- (Keep previous dummy data, BASE_URL, PROFILE_API_URL, getAccessToken)
 const dummyProfileData = {
     name: 'Rohan Sharma',
     email: 'aryan.patel@navuni.edu.in',
@@ -36,13 +34,15 @@ const Profile = () => {
     const [profileData, setProfileData] = useState(dummyProfileData);
     const [isLoading, setIsLoading] = useState(true);
     const [profileImage, setProfileImage] = useState('');
-    // --- useEffect and fetchProfileData function remain the same ---
+    const [userProducts, setUserProducts] = useState([]);
+    const [productsLoading, setProductsLoading] = useState(false);
+
     useEffect(() => {
         fetchProfileData();
+        fetchUserProducts();
     }, []);
 
     const fetchProfileData = async () => {
-        // ... (your existing fetchProfileData function)
         setIsLoading(true);
         const token = await getAccessToken();
         if (!token) {
@@ -63,12 +63,10 @@ const Profile = () => {
                     timeout: 10000,
                 },
             );
-            // console.log("API Response Status:", response.status);
 
             if (response.status >= 200 && response.status < 300 && response.data) {
                 const fetchedData = response.data.data || response.data;
                 if (fetchedData && fetchedData.fullName && fetchedData.email) {
-                    // console.log("Successfully fetched profile data from API.");
                     setProfileData(prevData => ({
                         ...prevData,
                         profileImageUrl:
@@ -76,28 +74,74 @@ const Profile = () => {
                         ...fetchedData,
                     }));
                 } else {
-                    console.warn(
-                        'Fetched data is missing essential fields. Using dummy data.',
-                    );
+                    console.warn('Fetched data is missing essential fields. Using dummy data.');
                     setProfileData(dummyProfileData);
                 }
             } else {
-                console.warn(
-                    `API request failed or returned no data. Status: ${response.status}. Using dummy data.`,
-                );
+                console.warn(`API request failed or returned no data. Status: ${response.status}. Using dummy data.`);
                 setProfileData(dummyProfileData);
             }
         } catch (error) {
-            console.error('Error fetching profile data:', error);
+            console.log('Error fetching profile data:', error);
             Alert.alert('Error', 'Could not fetch profile information.');
             console.log('API call failed. Falling back to dummy data.');
             setProfileData(dummyProfileData);
         } finally {
             setIsLoading(false);
-            // console.log("Finished fetch attempt.");
         }
     };
-    // --- End of useEffect and fetchProfileData ---
+
+    const fetchUserProducts = async () => {
+        setProductsLoading(true);
+        try {
+            const token = await getAccessToken();
+            if (!token) {
+                console.warn('No token found, cannot fetch products');
+                return;
+            }
+
+            console.log('Fetching user profile...');
+            const response = await axios.get(`${API_URL}/user/profile`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            console.log('Profile response:', response.data);
+
+            const userData = response.data?.data || response.data;
+            console.log('User data:', userData);
+
+            // Check for products in both possible fields
+            const products = userData?.sellPosts || userData?.userSellpost || [];
+            console.log('Found products:', products);
+
+            setUserProducts(products);
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+            if (error.response?.status === 401) {
+                Alert.alert('Session Expired', 'Please login again');
+                navigation.navigate('Login');
+            } else {
+                Alert.alert('Error', 'Could not load profile data');
+            }
+            setUserProducts([]);
+        } finally {
+            setProductsLoading(false);
+        }
+    };
+
+    // Update the useEffect to include refresh on focus
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            fetchProfileData();
+            fetchUserProducts();
+        });
+
+        // Initial fetch
+        fetchProfileData();
+        fetchUserProducts();
+
+        return unsubscribe;
+    }, [navigation]);
 
     const handleBackPress = () => navigation.goBack();
     const handleOptionsPress = () => {
@@ -113,7 +157,82 @@ const Profile = () => {
             { cancelable: true }
         );
     };
-    
+
+    const handleImagePick = async () => {
+        const options = {
+            mediaType: 'photo',
+            quality: 0.7,
+        };
+
+        launchImageLibrary(options, async (response) => {
+            if (response.didCancel) {
+                console.log('Image selection cancelled');
+                return;
+            }
+
+            const asset = response.assets?.[0];
+            if (!asset) {
+                Alert.alert('Error', 'No image selected');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('ProfilePicture', {
+                uri: asset.uri,
+                name: asset.fileName || 'profile.jpg',
+                type: asset.type,
+            });
+
+            try {
+                const token = await getAccessToken();
+                const res = await axios.put(`${API_URL}/user/update-profile-picture`, formData, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+
+                if (res.status === 200) {
+                    Alert.alert('Success', 'Profile picture updated');
+                    setProfileImage(res.data.profilePictureUrl);
+                    fetchProfileData(); // Refresh profile data
+                } else {
+                    Alert.alert('Error', 'Update failed');
+                }
+            } catch (err) {
+                console.error(err);
+                Alert.alert('Upload Error', 'Failed to upload image');
+            }
+        });
+    };
+
+    const renderProductItem = ({ item }) => {
+        // Handle case where Status might be capitalized and ensure output is capitalized
+        const status = (item.Status || item.status || 'Available').toUpperCase();
+
+        return (
+            <TouchableOpacity
+                style={styles.productCard}
+                onPress={() => navigation.navigate('ProductInfo', { product: item })}
+            >
+                <Image
+                    source={item.image ? { uri: item.image } : require('../assets/images/university.png')}
+                    style={styles.productImage}
+                />
+                <View style={styles.productDetails}>
+                    <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.productPrice}>₹{item.price}</Text>
+                    <Text style={[
+                        styles.productStatus,
+                        status === 'SOLD' ? styles.soldStatus : styles.availableStatus
+                    ]}>
+                        {status}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
     if (isLoading && !profileData.name) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
@@ -122,64 +241,16 @@ const Profile = () => {
             </SafeAreaView>
         );
     }
-    const handleImagePick = async () => {
-        const options = {
-        mediaType: 'photo',
-        quality: 0.7,
-    };
-
-          launchImageLibrary(options, async (response) => {
-            if (response.didCancel) {
-              console.log('Image selection cancelled');
-              return;
-            }
-        
-            const asset = response.assets?.[0];
-            if (!asset) {
-              Alert.alert('Error', 'No image selected');
-              return;
-            }
-        
-            const formData = new FormData();
-            formData.append('ProfilePicture', {
-              uri: asset.uri,
-              name: asset.fileName || 'profile.jpg',
-              type: asset.type,
-            });
-        
-            try {
-              const token = await getAccessToken();
-              const res = await axios.put(`${API_URL}/user/update-profile-picture`, formData, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  'Content-Type': 'multipart/form-data',
-                },
-              });
-          
-              if (res.status === 200) {
-                Alert.alert('Success', 'Profile picture updated');
-                setProfileImage(res.data.profilePictureUrl);
-              } else {
-                Alert.alert('Error', 'Update failed');
-              }
-            } catch (err) {
-              console.error(err);
-              Alert.alert('Upload Error', 'Failed to upload image');
-            }
-          });
-        };
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            {/* --- Header --- */}
+            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleBackPress} style={styles.headerButton}>
                     <Icon name="chevron-back" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Profile</Text>
-                <TouchableOpacity
-                    onPress={handleOptionsPress}
-                    style={styles.headerButton}>
+                <TouchableOpacity onPress={handleOptionsPress} style={styles.headerButton}>
                     <Icon name="ellipsis-horizontal" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
             </View>
@@ -189,32 +260,31 @@ const Profile = () => {
                 contentContainerStyle={styles.scrollContentContainer}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled">
-                {/* --- Profile Image / Message Button Area (Side by Side) --- */}
+
+                {/* Profile Image */}
                 <View style={styles.profileHeaderArea}>
-                  <View style={styles.profileImageContainer}>
-                    <Image
-                      source={profileData.ProfilePicture ? { uri: profileData.ProfilePicture } : require('../assets/images/user.png')}
-                      style={styles.profileImage}
-                    />
-                    <Pressable style={styles.updateButton} onPress={handleImagePick}>
-                      <Icon name="add-circle-outline" size={28} color="#fff" />
-                    </Pressable>
-                  </View>
+                    <View style={styles.profileImageContainer}>
+                        <Image
+                            source={profileData.ProfilePicture ?
+                                { uri: profileData.ProfilePicture } :
+                                require('../assets/images/user.png')}
+                            style={styles.profileImage}
+                        />
+                        <Pressable style={styles.updateButton} onPress={handleImagePick}>
+                            <Icon name="add-circle-outline" size={28} color="#fff" />
+                        </Pressable>
+                    </View>
                 </View>
-                {/* --- Profile Details Below Image/Button Area --- */}
+
+                {/* Profile Details */}
                 <View style={styles.profileDetailsContainer}>
-                    {/* Name  */}
                     <Text style={styles.profileName}>
                         {profileData.fullName || 'Name Unavailable'}
                     </Text>
 
-
-                    {/* --- Divider --- */}
                     <View style={styles.divider} />
 
-                    {/* Info Section */}
                     <View style={styles.infoSection}>
-                        {/* Email */}
                         <View style={styles.infoRow}>
                             <Icon
                                 name="mail-outline"
@@ -227,27 +297,26 @@ const Profile = () => {
                             </Text>
                         </View>
 
-                        {/* Degree */}
                         <View style={styles.infoRow}>
-                        <Icon
-                            name="school-outline"
-                            size={21}
-                            color="#505050"
-                            style={styles.infoIcon}
-                        />
-                        <TouchableOpacity
-                        onPress={() =>
-                        Alert.alert(
-                                'Program & Course Info',
-                                `Program: ${profileData.program || 'Not specified'}\nCourse: ${profileData.course || 'Not specified'}`
-                         )
-                      }>
-                        <Text style={[styles.infoText, styles.linkText]}>
-                            {profileData.program || 'Program not specified'} / {profileData.course || 'Course not specified'}
-                        </Text>
-                    </TouchableOpacity>
-                    </View>
-                        {/* Graduation Years */}
+                            <Icon
+                                name="school-outline"
+                                size={21}
+                                color="#505050"
+                                style={styles.infoIcon}
+                            />
+                            <TouchableOpacity
+                                onPress={() =>
+                                    Alert.alert(
+                                        'Program & Course Info',
+                                        `Program: ${profileData.program || 'Not specified'}\nCourse: ${profileData.course || 'Not specified'}`
+                                    )
+                                }>
+                                <Text style={[styles.infoText, styles.linkText]}>
+                                    {profileData.program || 'Program not specified'} / {profileData.course || 'Course not specified'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
                         <View style={styles.infoRow}>
                             <Icon
                                 name="calendar-outline"
@@ -261,44 +330,44 @@ const Profile = () => {
                         </View>
                     </View>
                 </View>
+
+                {/* User's Products Section */}
+                <View style={styles.productsSection}>
+                    <Text style={styles.sectionTitle}>Listed Products</Text>
+
+                    {productsLoading ? (
+                        <ActivityIndicator size="small" color="#E53935" />
+                    ) : userProducts.length > 0 ? (
+                        <FlatList
+                            data={userProducts}
+                            renderItem={renderProductItem}
+                            keyExtractor={(item) => item._id}
+                            numColumns={3}  // Changed from 2 to 3
+                            columnWrapperStyle={styles.productList}
+                            scrollEnabled={false}
+                        />
+                    ) : (
+                        <View style={styles.emptyStateContainer}>
+                            <Icon name="cube-outline" size={50} color="#cccccc" alignSelf="center" />
+                            <Text style={styles.emptyStateText}>No products listed yet</Text>
+                            <TouchableOpacity
+                                style={styles.addButton}
+                                onPress={() => navigation.navigate('AddProduct')}
+                            >
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
             </ScrollView>
         </SafeAreaView>
     );
 };
 
-// --- Styles --- (Keep your existing styles)
 const { width } = Dimensions.get('window');
 const PROFILE_IMAGE_SIZE = 125;
 const PROFILE_IMAGE_BORDER = 0;
 
-const styles = StyleSheet.create({ 
-      profileImageContainer: {
-      position: 'relative',
-      width: PROFILE_IMAGE_SIZE,
-      height: PROFILE_IMAGE_SIZE,
-      borderRadius: PROFILE_IMAGE_SIZE / 2,
-      overflow: 'visible',
-      borderWidth: PROFILE_IMAGE_BORDER,
-      borderColor: '#FFFFFF',
-      backgroundColor: '#E0E0E0',
-      marginBottom: 8, 
-      zIndex:0,
-    },
-  updateButton: {
-  position: 'absolute',
-  bottom: 0,
-  right: 0,
-  backgroundColor: 'rgba(229, 57, 53, 0.85)', // semi-transparent red
-  borderRadius: 16,
-  padding: 2,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.3,
-  shadowRadius: 2,
-  elevation: 3,
-  zIndex:1,
-},
-
+const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
@@ -352,6 +421,18 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         width: '90%',
     },
+    profileImageContainer: {
+        position: 'relative',
+        width: PROFILE_IMAGE_SIZE,
+        height: PROFILE_IMAGE_SIZE,
+        borderRadius: PROFILE_IMAGE_SIZE / 2,
+        overflow: 'visible',
+        borderWidth: PROFILE_IMAGE_BORDER,
+        borderColor: '#FFFFFF',
+        backgroundColor: '#E0E0E0',
+        marginBottom: 8,
+        zIndex: 0,
+    },
     profileImage: {
         width: PROFILE_IMAGE_SIZE,
         height: PROFILE_IMAGE_SIZE,
@@ -360,26 +441,19 @@ const styles = StyleSheet.create({
         borderColor: '#FFFFFF',
         backgroundColor: '#E0E0E0',
     },
-    messageButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#007AFF',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 20,
+    updateButton: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: 'rgba(229, 57, 53, 0.85)',
+        borderRadius: 16,
+        padding: 2,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.27,
-        shadowRadius: 4.65,
-        elevation: 6,
-    },
-    messageButtonIcon: {
-        marginRight: 8,
-    },
-    messageButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.3,
+        shadowRadius: 2,
+        elevation: 3,
+        zIndex: 1,
     },
     profileDetailsContainer: {
         width: '90%',
@@ -390,13 +464,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#1A1A1A',
         textAlign: 'center',
-    },
-    profileBio: {
-        fontSize: 16,
-        color: '#555555',
-        textAlign: 'center',
-        marginTop: 15,
-        lineHeight: 24,
     },
     infoSection: {
         width: '100%',
@@ -429,6 +496,78 @@ const styles = StyleSheet.create({
         backgroundColor: '#DADADA',
         marginVertical: 20,
     },
+    productsSection: {
+        width: '100%',
+        marginTop: 30,
+        paddingHorizontal: 15,
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginBottom: 15,
+    },
+    productList: {
+        justifyContent: 'space-between',
+        marginBottom: 15,
+    },
+    productCard: {
+        width: '30%',  // Changed from '48%' to '30%' to fit 3 columns
+        margin: '1%', // Added margin to maintain spacing
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        padding: 10,
+        marginBottom: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    productImage: {
+        width: '100%',
+        height: 100,  // Slightly reduced height to fit more content
+        borderRadius: 8,
+        marginBottom: 8,
+        resizeMode: 'cover',
+    },
+    productDetails: {
+        paddingHorizontal: 5,
+    },
+    productTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 4,
+    },
+    productPrice: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#000',
+        marginBottom: 4,
+    },
+    productStatus: {
+        fontSize: 10,
+        color: '#666',
+    },
+    noProductsText: {
+        textAlign: 'center',
+        color: '#666',
+        marginVertical: 20,
+        fontSize: 16,
+    },
+    soldStatus: {
+        color: '#FF3B30',
+    },
+    availableStatus: {
+        color: '#34C759',
+    },
+    emptyStateText: {
+        fontSize: 16,
+        color: '#cccccc',
+        textAlign: 'center',
+        marginTop: 20,
+    }
 });
 
 export default Profile;

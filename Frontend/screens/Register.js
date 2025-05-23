@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,18 +10,28 @@ import {
   Pressable,
   ScrollView,
   Alert,
+  ActivityIndicator,
+  Dimensions
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import { API_URL } from '@env';
 import axios from 'axios';
+import Icon from 'react-native-vector-icons/Ionicons';
+
+const { width, height } = Dimensions.get('window');
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword1, setShowPassword1] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+  const scrollViewRef = useRef(null);
 
   const handleSignUp = async () => {
+    setLoading(true);
     if (!email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all the fields.');
       return;
@@ -46,7 +56,7 @@ const Register = () => {
           'OTP Sent',
           'Please check your email for the verification code.',
         );
-        navigation.navigate('Otp', {email}); // Navigate to Otp.js, passing the email
+        navigation.navigate('Otp', { email }); // Navigate to Otp.js, passing the email
       } else {
         Alert.alert(
           'Error',
@@ -66,12 +76,14 @@ const Register = () => {
         errorMessage = 'Network error. Please check your internet connection.';
       }
       Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent} keyboardShouldPersistTaps="handled">
         <View style={styles.logoContainer}>
           <Image
             style={styles.logo}
@@ -88,9 +100,11 @@ const Register = () => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>E-mail:</Text>
             <View style={styles.inputWrapper}>
+              <Icon name="mail-outline" size={24} color="#555" style={styles.icon} />
               <TextInput
                 value={email}
                 onChangeText={setEmail}
+                onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
                 placeholder="Enter University mail ID"
                 placeholderTextColor="#555"
                 style={styles.input}
@@ -99,42 +113,55 @@ const Register = () => {
 
             <Text style={styles.label}>Password:</Text>
             <View style={styles.inputWrapper}>
-              <Image
-                source={require('../assets/icons/icons8-lock-28.png')}
-                style={styles.icon}
-              />
+              <Icon name="lock-closed-outline" size={24} color="#555" style={styles.icon} />
               <TextInput
                 value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholder="Choose a password"
-                placeholderTextColor="#555"
+                onChangeText={(text) => setPassword(text)}
+                onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                secureTextEntry={!showPassword}
+                placeholder='Choose a Password'
+                placeholderTextColor={"#555"}
                 style={styles.input}
               />
+              <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10}>
+                <Icon
+                  name={showPassword ? 'eye' : 'eye-off'}
+                  size={24}
+                  color="#555"
+                  style={styles.eyeIcon}
+                />
+              </Pressable>
             </View>
 
             <Text style={styles.label}>Confirm Password:</Text>
             <View style={styles.inputWrapper}>
-              <Image
-                source={require('../assets/icons/icons8-lock-28.png')}
-                style={styles.icon}
-              />
+              <Icon name="lock-closed-outline" size={24} color="#555" style={styles.icon} />
               <TextInput
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                placeholder="Rewrite password"
-                placeholderTextColor="#555"
+                onChangeText={(text) => setConfirmPassword(text)}
+                onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                secureTextEntry={!showPassword1}
+                placeholder='Rewrite Password'
+                placeholderTextColor={"#555"}
                 style={styles.input}
               />
+              <Pressable onPress={() => setShowPassword1(!showPassword1)} hitSlop={10}>
+                <Icon
+                  name={showPassword1 ? 'eye' : 'eye-off'}
+                  size={24}
+                  color="#555"
+                  style={styles.eyeIcon}
+                />
+              </Pressable>
             </View>
           </View>
 
-          <Pressable onPress={handleSignUp} style={styles.button}>
-            <Image
-              source={require('../assets/icons/icons8-arrow-50.png')}
-              style={styles.buttonIcon}
-            />
+          <Pressable onPress={handleSignUp} style={styles.btn} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Image source={require('../assets/icons/icons8-arrow-50.png')} style={styles.btnIcon} />
+            )}
           </Pressable>
 
           <Pressable onPress={() => navigation.goBack()}>
@@ -174,29 +201,32 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginTop: 40,
+    marginTop: 30,
     color: '#AA8F00',
   },
   inputContainer: {
-    marginTop: 20,
+    marginTop: height * 0.001,
+    marginBottom: height * 0.03,
     width: '100%',
     paddingHorizontal: 20,
   },
   label: {
     color: 'black',
     fontSize: 17,
-    marginBottom: 5,
+    marginTop: height * 0.025, // Responsive margin top
+    marginBottom: height * 0.01,
     fontWeight: '500',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 5,
     borderRadius: 10,
     backgroundColor: 'whitesmoke',
-    paddingHorizontal: 10,
-    width: '100%',
-    marginBottom: 20,
+    paddingHorizontal: width * 0.03, // Responsive padding
+    width: width * 0.8, // Responsive width
     elevation: 3,
+    marginHorizontal: width * 0.01, // Responsive margin
   },
   icon: {
     width: 24,
@@ -204,22 +234,25 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   input: {
-    flex: 1,
-    color: '#555',
-    fontSize: 17,
+    color: "#555",
+    fontSize: width * 0.045, // Responsive font size
+    flex: 1, // Take remaining space
+    paddingVertical: height * 0.015, // Responsive vertical padding
   },
-  button: {
+  btn: {
     backgroundColor: '#59008F',
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 100,
-    width: 70,
+    justifyContent: 'center',
+    padding: width * 0.025, // Responsive padding
+    borderRadius: width * 0.5, // Make it circular
+    width: width * 0.18, // Responsive width
+    height: width * 0.18, // Responsive height
     alignSelf: 'center',
-    marginTop: 50,
   },
-  buttonIcon: {
-    width: 30,
-    height: 30,
+  btnIcon: {
+    width: width * 0.08, // Responsive icon size
+    height: width * 0.08, // Responsive icon size
+    resizeMode: 'contain',
   },
   loginText: {
     color: 'black',

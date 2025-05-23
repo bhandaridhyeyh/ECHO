@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { getAccessToken } from '../utilities/keychainUtils'; // Assuming this is the correct path
+import { API_URL} from '@env'
 
 const CompleteProfile = () => {
     const [enrollmentYear, setEnrollmentYear] = useState("");
@@ -32,7 +33,7 @@ const CompleteProfile = () => {
                 return;
             }
 
-            const response = await axios.put('http://192.168.19.207:3600/user/complete-profile', { // Replace with your actual endpoint
+            const response = await axios.put(`${API_URL}/user/complete-profile`, { // Replace with your actual endpoint
                 enrollmentYear,
                 university,
                 course,

@@ -20,6 +20,7 @@ import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
 import {getAccessToken} from '../utilities/keychainUtils'; // Import getAccessToken
+import { API_URL} from '@env'
 
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
@@ -88,7 +89,7 @@ const Sell = () => {
                 type: imageType,
             });
 
-            const response = await axios.post(`http://192.168.19.207:3600/post/sell-posts`, formData, { // Assuming your backend route is /api/posts
+            const response = await axios.post(`${API_URL}/post/sell-posts`, formData, { // Assuming your backend route is /api/posts
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     Authorization: `Bearer ${token}`,
@@ -97,7 +98,7 @@ const Sell = () => {
 
             if (response.status === 201) {
                 Alert.alert('Success', 'Your item has been posted successfully!');
-                navigation.navigate('Home'); // Navigate back to home after successful post
+                navigation.navigate('Main', { screen: 'Home' }); // Navigate back to home after successful post
             } else {
                 Alert.alert('Error', 'Failed to post item.');
                 console.error('Failed to post item:', response);

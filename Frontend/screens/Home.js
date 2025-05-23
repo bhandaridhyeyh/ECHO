@@ -1,15 +1,20 @@
-import { StyleSheet, Text, View, Image, FlatList, ScrollView, Pressable, TextInput, PermissionsAndroid, Share, Alert, Platform, RefreshControl } from 'react-native';
+import { StyleSheet, Text, View, Image, FlatList, ScrollView, Pressable, TextInput, Alert, RefreshControl, LogBox } from 'react-native';
 import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { launchCamera } from 'react-native-image-picker';
 import { FloatingAction } from 'react-native-floating-action';
 import axios from 'axios';
 import { getAccessToken } from '../utilities/keychainUtils'; // Import the storeAccessToken function
-import { API_URL} from '@env'
-// Define a constant for the base API URL for better maintainability
+import { API_URL } from '@env'
 
 const Home = ({ route }) => {
+
+    useEffect(() => {
+        LogBox.ignoreLogs([
+            'VirtualizedLists should never be nested',
+        ]);
+    }, []);
+
     const actions = [{
         text: 'Sell',
         icon: require('../assets/icons/icons8-sell-24.png'),
@@ -27,6 +32,9 @@ const Home = ({ route }) => {
 
     const [recentlyAddedItems, setRecentlyAddedItems] = useState([]);
     const [refreshing, setRefreshing] = useState(false); // State for manual refresh
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
     const navigation = useNavigation();
 
     // Consider fetching posts again if a new item is added instead of directly adding to the state
@@ -57,9 +65,9 @@ const Home = ({ route }) => {
                     Alert.alert('Error', 'Failed to fetch posts.');
                     console.error('Failed to fetch posts:', response);
                 }
-                
+
             } catch (error) {
-                console.error('Error fetching posts:', error);
+                console.log('Error fetching posts:', JSON.stringify(error, null, 2));
                 Alert.alert('Error', 'Could not connect to the server to fetch posts.');
             } finally {
                 setRefreshing(false); // ✅ Ensures refresh state ends in all cases
@@ -69,7 +77,23 @@ const Home = ({ route }) => {
             navigation.navigate('Login');
             setRefreshing(false);
         }
-    };    
+    };
+
+    const handleSearch = (query) => {
+        setSearchQuery(query);
+        if (query.trim() === '') {
+            setIsSearching(false);
+            setSearchResults([]);
+            return;
+        }
+
+        const filtered = recentlyAddedItems.filter(item =>
+            item.title.toLowerCase().includes(query.toLowerCase())
+        );
+
+        setSearchResults(filtered);
+        setIsSearching(true);
+    };
 
     // Function to handle manual refresh
     const onRefresh = useCallback(() => {
@@ -93,66 +117,6 @@ const Home = ({ route }) => {
 
     const navigateToProductInfo = (product) => {
         navigation.navigate('ProductInfo', { product });
-    };
-
-    const onShare = async () => {
-        try {
-            const result = await Share.share({
-                message: "This person is in need! Kindly HELP!",
-            });
-
-            if (result.action === Share.sharedAction) {
-                if (result.activityType) {
-                    // Shared with an activity (e.g., shared via a specific app)
-                } else {
-                    // Shared without specifying the app
-                }
-            } else if (result.action === Share.dismissedAction) {
-                // User dismissed the share dialog
-            }
-        } catch (error) {
-            Alert.alert('Error', 'Something went wrong while trying to share.');
-        }
-    };
-
-    const requestCameraPermission = async () => {
-        if (Platform.OS === 'android') {
-            try {
-                const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.CAMERA,
-                    {
-                        title: 'Camera Permission',
-                        message: 'This app needs access to your camera',
-                        buttonNeutral: 'Ask Me Later',
-                        buttonNegative: 'Cancel',
-                        buttonPositive: 'OK',
-                    },
-                );
-                if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-                    console.log('You can use the camera');
-                } else {
-                    console.log('Camera permission denied');
-                }
-            } catch (err) {
-                console.warn(err);
-            }
-        }
-        // On iOS, permission is handled differently and might prompt automatically when launchCamera is called.
-    };
-
-    const handleTakePhoto = async () => {
-        await requestCameraPermission();
-        launchCamera({ mediaType: 'photo' }, (response) => {
-            if (response.didCancel) {
-                console.log('User cancelled image picker');
-            } else if (response.errorCode) {
-                console.log('ImagePicker Error: ', response.errorMessage);
-            } else if (response.assets && response.assets.length > 0) {
-                // setimageUri(response.assets[0].uri); // You might need to handle this later
-                console.log('Image taken:', response.assets[0].uri);
-                // Consider navigating to a screen to create a new post with the captured image
-            }
-        });
     };
 
     return (
@@ -179,106 +143,122 @@ const Home = ({ route }) => {
                         style={styles.university}
                         source={require('../assets/images/university.png')} />
                 </View>
+
+                {/* Search Bar */}
                 <Pressable>
                     <View style={styles.searchbar}>
                         <Image source={require('../assets/icons/icons8-search-24.png')} />
                         <TextInput
-                            placeholder='What are you looking for?'
-                            placeholderTextColor={"#555"}
-                            style={{ fontSize: 14, color: 'black', width: 250 }}
-                            // Implement search functionality here
-                            editable={false} // Consider making this editable when search is implemented
+                            placeholder="What are you looking for?"
+                            placeholderTextColor={'#555'}
+                            style={{ fontSize: 14, color: 'black', width: 220 }}
+                            value={searchQuery}
+                            onChangeText={handleSearch}
                         />
-                        {/* Consider using a more appropriate icon for camera functionality within search */}
-                        {/* <Pressable onPress={handleTakePhoto}>
-                            <Image source={require('../assets/icons/icons8-camera-24.png')} />
-                        </Pressable> */}
+                        {searchQuery.length > 0 && (
+                            <Pressable onPress={() => handleSearch('')} />
+                        )}
                     </View>
                 </Pressable>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ color: 'black', marginTop: 48, fontSize: 18, paddingLeft: 20 }}>Browse</Text>
-                    {/* <Pressable onPress={() => { }}>
-                        <Text style={{ color: 'black', marginTop: 52, paddingRight: 20, fontWeight: 'bold', textDecorationLine: 'underline' }}>See all</Text>
-                    </Pressable> */}
-                </View>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Pressable style={styles.card} onPress={() => { /* Implement navigation to BOOKS category */ }}>
-                            <Image source={require('../assets/images/icons8-books-100.png')} style={{ height: 60, width: 60 }} />
-                            <Text style={{ color: 'black', fontSize: 12 }}>BOOKS</Text>
-                        </Pressable>
-                        <Pressable style={styles.card} onPress={() => { /* Implement navigation to NOTES category */ }}>
-                            <Image source={require('../assets/images/icons8-notes-100.png')} style={{ height: 60, width: 60 }} />
-                            <Text style={{ color: 'black', fontSize: 12 }}>NOTES</Text>
-                        </Pressable>
-                        <Pressable style={styles.card} onPress={() => { /* Implement navigation to TOOLS category */ }}>
-                            <Image source={require('../assets/images/icons8-tools-100.png')} style={{ height: 60, width: 60 }} />
-                            <Text style={{ color: 'black', fontSize: 12 }}>TOOLS</Text>
-                        </Pressable>
-                        <Pressable style={styles.card} onPress={() => { /* Implement navigation to GADGETS category */ }}>
-                            <Image source={require('../assets/images/icons8-smartphone-tablet-100.png')} style={{ height: 60, width: 60 }} />
-                            <Text style={{ color: 'black', fontSize: 12 }}>GADGETS</Text>
-                        </Pressable>
+                {/* Show search results if searching */}
+                {isSearching ? (
+                    <View style={{ paddingHorizontal: 20, marginTop: 60 }}>
+                        <Text style={{ color: 'black', fontSize: 18, marginBottom: 10 }}>
+                            Search Results for "{searchQuery}"
+                        </Text>
+                        {searchResults.length > 0 ? (
+                            <FlatList
+                                data={searchResults}
+                                keyExtractor={(item) => item._id?.toString() ?? Math.random().toString()}
+                                renderItem={renderItem}
+                                numColumns={2}               // Show 2 items per row
+                                columnWrapperStyle={{        // Space between the two items horizontally
+                                    justifyContent: 'space-between',
+                                    marginBottom: 15,
+                                }}
+                                contentContainerStyle={{ paddingBottom: 20 }}
+                            />
+                        ) : (
+                            <Text style={{ color: 'gray' }}>No results found.</Text>
+                        )}
                     </View>
-                </ScrollView>
-                <View style={{ height: 4, backgroundColor: 'whitesmoke', marginTop: 15 }} />
-                <View>
-                    <Text style={{ color: 'black', marginTop: 8, fontSize: 18, paddingLeft: 20 }}>Recently Added</Text>
-                    <FlatList
-                        data={recentlyAddedItems}
-                        keyExtractor={(item) => item._id ? item._id.toString() : Math.random().toString()}
-                        renderItem={renderItem}
-                        horizontal={true}
-                        showsHorizontalScrollIndicator={false}
-                    />
-                    <View style={{ height: 4, backgroundColor: 'whitesmoke', marginTop: 15 }} />
-                </View>
 
-                {/* You can uncomment and modify this section if you want to render items based on categories */}
-                <View>
-                    <Text style={{ color: 'black', marginTop: 25, fontSize: 18, paddingLeft: 20 }}>Books</Text>
-                    <FlatList
-                        data={recentlyAddedItems.filter(item => item.category === 'books')} // Example filtering
-                        keyExtractor={(item) => item._id ? item._id.toString() : Math.random().toString()}
-                        renderItem={renderItem}
-                        horizontal={true}
-                        showsHorizontalScrollIndicator={false}
-                    />
-                    <View style={{ height: 4, backgroundColor: 'whitesmoke', marginTop: 15 }} />
-                </View>
-                <View>
-                    <Text style={{ color: 'black', marginTop: 25, fontSize: 18, paddingLeft: 20 }}>Notes</Text>
-                    <FlatList
-                        data={recentlyAddedItems.filter(item => item.category === 'notes')} // Example filtering
-                        keyExtractor={(item) => item._id ? item._id.toString() : Math.random().toString()}
-                        renderItem={renderItem}
-                        horizontal={true}
-                        showsHorizontalScrollIndicator={false}
-                    />
-                    <View style={{ height: 4, backgroundColor: 'whitesmoke', marginTop: 15 }} />
-                </View>
-                <View>
-                    <Text style={{ color: 'black', marginTop: 25, fontSize: 18, paddingLeft: 20 }}>Tools</Text>
-                    <FlatList
-                        data={recentlyAddedItems.filter(item => item.category === 'tools')} // Example filtering
-                        keyExtractor={(item) => item._id ? item._id.toString() : Math.random().toString()}
-                        renderItem={renderItem}
-                        horizontal={true}
-                        showsHorizontalScrollIndicator={false}
-                    />
-                    <View style={{ height: 4, backgroundColor: 'whitesmoke', marginTop: 15 }} />
-                </View>
+                ) : (
+                    <>
+                        {/* Categories and Items */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                            <Text style={{ color: 'black', marginTop: 48, fontSize: 18, paddingLeft: 20 }}>Browse Categories</Text>
+                            <Pressable onPress={() => { }}>
+                                <Text style={{ color: 'black', marginTop: 52, paddingRight: 20, fontWeight: 'bold', textDecorationLine: 'underline' }}>See all</Text>
+                            </Pressable>
+                        </View>
 
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <Pressable style={styles.card}>
+                                    <Image source={require('../assets/images/icons8-books-100.png')} style={{ height: 80, width: 80 }} />
+                                    <Text style={{ color: 'black', fontSize: 13 }}>BOOKS</Text>
+                                </Pressable>
+                                <Pressable style={styles.card}>
+                                    <Image source={require('../assets/images/icons8-notes-100.png')} style={{ height: 80, width: 80 }} />
+                                    <Text style={{ color: 'black', fontSize: 13 }}>NOTES</Text>
+                                </Pressable>
+                                <Pressable style={styles.card}>
+                                    <Image source={require('../assets/images/icons8-tools-100.png')} style={{ height: 80, width: 80 }} />
+                                    <Text style={{ color: 'black', fontSize: 13 }}>TOOLS</Text>
+                                </Pressable>
+                                <Pressable style={styles.card}>
+                                    <Image source={require('../assets/images/icons8-smartphone-tablet-100.png')} style={{ height: 80, width: 80 }} />
+                                    <Text style={{ color: 'black', fontSize: 13 }}>GADGETS</Text>
+                                </Pressable>
+                            </View>
+                        </ScrollView>
+
+                        <View style={{ height: 4, backgroundColor: 'whitesmoke', marginTop: 15 }} />
+
+                        {/* Recently Added and Categories */}
+                        <View>
+                            <Text style={{ color: 'black', marginTop: 8, fontSize: 18, paddingLeft: 20 }}>Recently Added</Text>
+                            <FlatList
+                                data={
+                                    [...recentlyAddedItems]
+                                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                                        .slice(0, 5)
+                                }
+                                keyExtractor={(item) => item._id?.toString() ?? Math.random().toString()}
+                                renderItem={renderItem}
+                                horizontal={true}
+                                showsHorizontalScrollIndicator={false}
+                            />
+                            <View style={{ height: 4, backgroundColor: 'whitesmoke', marginTop: 15 }} />
+                        </View>
+
+                        {/* Filtered category lists */}
+                        {['books', 'notes', 'tools', 'gadgets'].map((category) => (
+                            <View key={category}>
+                                <Text style={{ color: 'black', marginTop: 25, fontSize: 18, paddingLeft: 20 }}>{category.charAt(0).toUpperCase() + category.slice(1)}</Text>
+                                <FlatList
+                                    data={recentlyAddedItems.filter(item => item.category === category)}
+                                    keyExtractor={(item) => item._id?.toString() ?? Math.random().toString()}
+                                    renderItem={renderItem}
+                                    horizontal={true}
+                                    showsHorizontalScrollIndicator={false}
+                                />
+                                <View style={{ height: 4, backgroundColor: 'whitesmoke', marginTop: 15 }} />
+                            </View>
+                        ))}
+                    </>
+                )}
             </ScrollView>
 
+            {/* Floating Button */}
             <FloatingAction
                 actions={actions}
                 onPressItem={name => {
                     if (name === 'sell_item') {
                         navigation.navigate("Sell");
-                    }
-                    else if (name === 'ask') {
+                    } else if (name === 'ask') {
                         navigation.navigate("Ask");
                     }
                 }}
@@ -343,9 +323,8 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'column',
         paddingVertical: 0,
-        paddingHorizontal: 10,
+        paddingHorizontal: 9,
         alignItems: 'center',
-        marginHorizontal: 10, // Added margin for better spacing
     },
     card1: {
         flexDirection: 'row',
