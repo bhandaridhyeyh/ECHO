@@ -78,8 +78,7 @@ const DeletePost = asyncHandler(async (req, res) => {
 });
 const GetallPost = asyncHandler(async (req, res) => { 
   const posts = await Sellpost.find().populate('seller', 'fullName course program ProfilePicture'); 
-  res.status(201) 
-  .json(new ApiResponse(201,posts,"Returned all the posts !"))
+  res.status(201).json(new ApiResponse(201,posts,"Returned all the posts !"))
 });
 
 const SearchedPost = asyncHandler(async (req, res) => {
@@ -100,14 +99,12 @@ if (minPrice || maxPrice) {
   if (maxPrice) filter.price.$lte = parseInt(maxPrice); // Price <= maxPrice $lte = less than or equal to  
 }
 
-
 const posts = await Sellpost.find(filter);
 
 if (!posts.length) {
   throw new apiError(404, "No matching posts found.");
 }
-
-  res.status(200).json(new ApiResponse(201, posts, "Searched Results"));
+ res.status(200).json(new ApiResponse(201, posts, "Searched Results"));
 
 }); 
 

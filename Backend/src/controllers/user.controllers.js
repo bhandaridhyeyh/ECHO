@@ -111,11 +111,12 @@ const registerUser = asyncHandler(async (req, res) => {
 }) 
 
 const complete_profile = asyncHandler(async (req, res) => {  
-    const { enrollmentYear, university, course, program,contactNumber} = req.body  
+    const { fullName,enrollmentYear, university, course, program,contactNumber} = req.body  
     if ([enrollmentYear, university, course,program,contactNumber].some((i) => i == null || (typeof i === 'string' && i.trim() === ""))) {  
         throw new apiError(401, "One of the required fields is missing or empty!");
     } 
-  const normalizedData = {
+  const normalizedData = { 
+      fullName : fullName,
       enrollmentYear: enrollmentYear.trim(),
       university: university.trim().toUpperCase(), 
       course: course.trim().toUpperCase(),
