@@ -5,24 +5,23 @@ import { Deal } from "../models/deal.models.js";
 import { Sellpost } from "../models/sellpost.models.js";
 
 const requestDeal = asyncHandler(async (req, res) => {
-    const { postId } = req.params  
+    const {sellerId,postId} = req.body
     const buyer_id = req.user._id 
     const post = await Sellpost.findById(postId); 
     if (!post) {  
         throw new apiError(404, "Post not Found!") 
     } 
-    const seller_id = post.seller.toString()
-    if (seller_id === buyer_id) {  
+    if (sellerId === buyer_id) {  
         throw new apiError(400, "You can not request on your own post !") 
     } 
-    const existingDeal = Deal.findOne({ seller_id, buyer_id }) 
+    const existingDeal = Deal.findOne({ sellerId, buyer_id }) 
     if (!existingDeal) {  
         throw new apiError(400, "You Have already requested for The Deal") 
     } 
     const deal = Deal.create({ 
         postId: postId, 
         buyerId: buyer_id, 
-        sellerId: seller_id, 
+        sellerId: sellerId, 
         status:"pending"
     }) 
     if (!deal) {  
