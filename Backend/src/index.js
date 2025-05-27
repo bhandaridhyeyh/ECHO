@@ -1,7 +1,7 @@
 import { app, corsOptions } from "./app.js"; 
 import { Server } from "socket.io";  
 import dbConnection from "./db/dbconnector.js"; 
-import { socketHandler } from "./controllers/chat.controllers.js";   
+import { socketHandler} from "./utils/socketHandler.js";   
 import http from 'http'; 
 import 'dotenv/config' 
 
@@ -17,4 +17,6 @@ dbConnection()
     })
     .catch((error)=>{ 
     console.log("connection failed !")
-})
+}) 
+
+app.set('io', io);  

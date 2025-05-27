@@ -4,8 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { apiError } from "../utils/apiError.js"; 
 import {Chat} from "../models/chat.models.js"
 import ApiResponse from "../utils/apiResponse.js";
-
-const users = {} 
+import { onlineusers } from "../utils/socketHandler.js";
 
 const CreatChat = asyncHandler(async (req, res) => {
   const { participant_id1, participant_id2 } = req.body;
@@ -51,80 +50,37 @@ const GetAllUserChats = asyncHandler(async (req, res) => {
     
 })
  
-const socketHandler = (io) => {
-    io.on('connection', (socket) => {
-        console.log("user socket id :", socket.id)
-        
-        // user joins the chat !
-        socket.on('join', async (userId) => {
-            users[userId] = socket.id
-            console.log(`${userId} connected with the ${socket.id}`)
-            
-            //checking and sending for any msg which to delivere when user comes online 
-            const unreadMessages = await Message.find({ receiver: userId, status: "pending" });
-            for (const msg of unreadMessages) {
-                await Message.findByIdAndUpdate(msg._id, { status: "delivered" });
-                io.to(users[userId]).emit("receiveMessage", {
-                    _id: msg._id,
-                    senderId: msg.sender,
-                    message: msg.content,
-                    status: "delivered",
-                    timestamp: msg.timestamp,
-                });
-            }
-        }) 
-        // to retrieve chat history 
-        socket.on('getChatHistory', async (userId1, userId2) => {
-            try {
-                const chatHistory = await Message.find({
-                    $or: [
-                        { sender: userId1, receiver: userId2 },
-                        { sender: userId2, receiver: userId1 },
-                    ],
-                }).sort({ timestamp: 1 }); // Sort messages by timestamp to show in order
-            
-                io.to(socket.id).emit('chatHistory', chatHistory);
-            }
-            catch (error) {  
-                console.error('Error fetching chat history:', error);
-                throw new Error('Error fetching chat history');
-            }  
-        }); 
-        // to send the msg which creates a msg document or entry in db 
-        socket.on("sendMessage", async (sender, receiver, content) => {
-            try {
-                
-                const newMessage = await Message.create({ sender, receiver, content, status: users[receiver] ? "delivered" : "pending" })
-                if (!newMessage) {
-                    socket.emit("error", {
-                        message: "Failed to send message. Please try again.",
-                    });
-                }
-
-                // when the user is online (its connected to the server and has a socket id ) msg is sent 
-                if (users[receiver]) {
-                    await Message.findByIdAndUpdate(newMessage._id, { status: "delivered" });
-
-                    io.to(users[receiver]).emit("receiveMessage", {
-                        _id: newMessage._id,
-                        sender,
-                        content,
-                        status: "delivered",
-                        timestamp: newMessage.timestamp,
-                    });
-                    // to notify the sender that msg is sent 
-                    socket.emit("messageStatusUpdate", {
-                        _id: newMessage._id,
-                        status: users[receiver] ? "delivered" : "pending"
-                        
-                    });
-                }
-            }
-            catch (error) {
-                console.error("Error sending message:", error.message);
-                socket.emit("error", { message: "Failed to send message." });
-            }
+async function handleSendMessage(socket,io,data,callback){
+    try {
+      const { senderId, recevierId, content ,chatId } = data 
+      if (!senderId || !recevierId || !content || !chatId) {  
+        return callback({ error: "required Fields are not there !" }) 
+      } 
+      const message = await Message.create({ 
+        chat:chatId, 
+        sender:senderId, 
+        receiver:recevierId, 
+        content:content,
+      }) 
+      if (!message) return callback({ error: "failed to Save the Message !" }) 
+      const receversocketid = onlineusers.get(recevierId) 
+      if (receversocketid) {
+        io.to(receversocketid).emit('recive-message', message)
+      }      
+      else {  
+        await Notification.create({ 
+          type: message, 
+          from: senderId, 
+          to: recevierId,  
+          message: `You received a new message from ${senderId}`, 
+          data: message,
         })
-    })}
+      } 
+      callback({ success: true, message }); 
+    } catch (error) {
+      console.log(error) 
+      return callback({ error: error }) 
+    }
+} 
 
-export {socketHandler,CreatChat, GetAllUserChats,}
+export {CreatChat, GetAllUserChats,handleSendMessage}

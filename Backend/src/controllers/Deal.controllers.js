@@ -1,59 +1,81 @@
-import { asyncHandler } from "../utils/asyncHandler.js"; 
-import  ApiResponse  from "../utils/apiResponse.js"; 
 import { apiError } from "../utils/apiError.js"; 
 import { Deal } from "../models/deal.models.js"; 
 import { Sellpost } from "../models/sellpost.models.js";
+import { onlineusers } from "../utils/socketHandler.js";
 
-const requestDeal = asyncHandler(async (req, res) => {
-    const {sellerId,postId} = req.body
-    const buyer_id = req.user._id 
-    const post = await Sellpost.findById(postId); 
-    if (!post) {  
-        throw new apiError(404, "Post not Found!") 
-    } 
-    if (sellerId === buyer_id) {  
-        throw new apiError(400, "You can not request on your own post !") 
-    } 
-    const existingDeal = Deal.findOne({ sellerId, buyer_id }) 
-    if (!existingDeal) {  
-        throw new apiError(400, "You Have already requested for The Deal") 
-    } 
-    const deal = Deal.create({ 
+
+async function handleRequestDeal(socket, io, data, callback) {  
+    try {
+        const { sellerId, buyerId, postId } = data 
+        const post = await Sellpost.findbyId(postId); 
+        if (!post) return callback({ error: "Post not Found!" }) 
+        if (sellerId === buyerId) return callback({ error: "seller and buyer are same !" }) 
+        const existingDeal = Deal.findOne({ sellerId, buyerId, postId }) 
+        if (existingDeal) return callback({ error: "Deal already Exists! " }) 
+        const deal = Deal.create({ 
         postId: postId, 
-        buyerId: buyer_id, 
+        buyerId: buyerId, 
         sellerId: sellerId, 
         status:"pending"
-    }) 
-    if (!deal) {  
-        throw new apiError(501,"Failed to genrate the Deal request")
-    }
-    res.status(200) 
-        .json(new ApiResponse(201, deal, "the Deal request SuccessFully Genrated")) 
-    
-})  
-
-const handleDealrequest = asyncHandler(async (req, res) => {  
-    const { deal_id } = req.params
-    if (!deal_id) { 
-        throw new apiError(404,"No Deal was found to be Settled")
-    }
-    const status = req.body   
-    
-    if (!status || !["accepted", "rejected"].includes(status)) {  
-        throw new apiError(401,"Not Valid Status Provided")
-    }
-    const deal = await Deal.findByIdAndUpdate(deal_id,{status:status})
-    if (!deal) {  
-        throw new apiError(501,"Failed to Update the Deal!")
-    } 
-    if (status === "accepted") {
-        const post = await Sellpost.findByIdAndUpdate(deal.postId, { status: "sold" }) 
-        if (!post) {  
-            throw new apiError(501,"Failed to Update the post status ")
+        }) 
+        if (!deal) return callback({ error: "Deal failed to created server error !" }) 
+        const receversocketid = onlineusers.get(sellerId) 
+        if (receversocketid) {  
+            io.to(receversocketid).emit("deal-request", deal); // goes to the target user !!
+        } 
+        else { 
+            const notification = Notification.create({ 
+            type: 'deal-request', 
+            from: buyerId, 
+            to: sellerId, 
+            message: `You have a new deal request from user ${buyerId}`,
+            data:deal
+        }) 
+        if (!notification) {  
+            throw new apiError(501,"Failed to genrate the Deal request !")
         }
-    }  
-    res.status(201).json(new ApiResponse(201, deal, `Deal has been ${status}`)) 
+        } 
+        callback({ success: true, deal }); // goes back to the one who triggered it !!
+    }
+    catch (error) {
+        callback({error:"internal error"})
+    }
+}   
     
-})
+async function handleResponseDeal(socket, io, data, callback) {
+    try {
+        const { dealId, status } = data;
+
+        if (!dealId) return callback({ error: "No Deal was found to be settled" });
+
+        if (!status || !["accepted", "rejected"].includes(status)) {
+            return callback({ error: "Invalid status provided" });
+        }
     
-export {requestDeal,handleDealrequest}
+        const deal = await Deal.findByIdAndUpdate(dealId, { status }, { new: true });
+        if (!deal) return callback({ error: "Failed to update the deal" });
+        const buyerSocketId = onlineusers.get(deal?.buyerId);
+        if (buyerSocketId) {
+            io.to(buyerSocketId).emit("deal-response", deal);
+        }
+        else {
+            await Notification.create({
+                type: "deal-response",
+                from: deal.sellerId,
+                to: deal.buyerId,
+                message: `Your deal request has been ${status} by the seller.`,
+                data: deal,
+            });
+        }
+        if (status === "accepted") {
+            const post = await Sellpost.findByIdAndUpdate(deal.postId, { status: "sold" }, { new: true });
+            if (!post) return callback({ error: "Failed to update the post status" });
+        }
+        callback({ success: true, deal });
+    }
+    catch (error) {
+        console.error(err);
+        callback({ error: "Internal Server Error" });
+    }
+}
+export {handleRequestDeal,handleResponseDeal}
