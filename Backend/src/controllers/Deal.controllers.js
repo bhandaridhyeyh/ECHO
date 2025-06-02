@@ -2,7 +2,7 @@ import { apiError } from "../utils/apiError.js";
 import { Deal } from "../models/deal.models.js"; 
 import { Sellpost } from "../models/sellpost.models.js";
 import { onlineusers } from "../utils/socketHandler.js";
-
+import Notification from "../models/notifications.models.js";
 
 async function handleRequestDeal(socket, io, data, callback) {  
     try {
@@ -78,4 +78,4 @@ async function handleResponseDeal(socket, io, data, callback) {
         callback({ error: "Internal Server Error" });
     }
 }
-export {handleRequestDeal,handleResponseDeal}
+export {handleRequestDeal, handleResponseDeal}

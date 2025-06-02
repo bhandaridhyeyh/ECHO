@@ -17,9 +17,10 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { API_URL } from '@env'
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { getAccessToken } from '../utilities/keychainUtils';
+import { getAccessToken, deleteAccessToken } from '../utilities/keychainUtils';
 
 const dummyProfileData = {
     name: 'Rohan Sharma',
@@ -105,14 +106,14 @@ const Profile = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            console.log('Profile response:', response.data);
+            // console.log('Profile response:', response.data);
 
             const userData = response.data?.data || response.data;
-            console.log('User data:', userData);
+            // console.log('User data:', userData);
 
             // Check for products in both possible fields
             const products = userData?.sellPosts || userData?.userSellpost || [];
-            console.log('Found products:', products);
+            // console.log('Found products:', products);
 
             setUserProducts(products);
         } catch (error) {
@@ -150,12 +151,26 @@ const Profile = () => {
             '',
             [
                 { text: 'Complete Profile', onPress: () => navigation.navigate('CompleteProfile') },
-                { text: 'Login', onPress: () => navigation.navigate('Login') },
                 { text: 'Register', onPress: () => navigation.navigate('Register') },
+                { text: 'Logout', onPress: handleLogout }, // Logout added here
                 { text: 'Cancel', style: 'cancel' },
             ],
             { cancelable: true }
         );
+    };
+
+    const handleLogout = async () => {
+        try {
+            await deleteAccessToken();
+            await AsyncStorage.removeItem('tradeMateUserId');
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+            });
+        } catch (error) {
+            console.error('Logout failed:', error);
+            Alert.alert("Logout Failed", "Something went wrong while logging out.");
+        }
     };
 
     const handleImagePick = async () => {

@@ -6,7 +6,8 @@ const ACCESS_TOKEN_KEY = 'tradeMateAccessToken'; // Use a consistent key for you
 
 const storeAccessToken = async (accessToken) => {
   try {
-    await Keychain.setGenericPassword(ACCESS_TOKEN_KEY, accessToken);
+    const tokenStr = typeof accessToken === 'string' ? accessToken : JSON.stringify(accessToken); // force string
+    await Keychain.setGenericPassword('token', tokenStr);
     console.log('Access token stored securely.');
     return true;
   } catch (error) {
@@ -19,7 +20,12 @@ const getAccessToken = async () => {
   try {
     const credentials = await Keychain.getGenericPassword();
     if (credentials) {
-      return credentials.password;
+      const token = credentials.password;
+      try {
+        return JSON.parse(token); // If it's a stringified object
+      } catch {
+        return token; // Already a string
+      }
     } else {
       console.log('No access token found in keychain.');
       return null;
@@ -32,7 +38,7 @@ const getAccessToken = async () => {
 
 const deleteAccessToken = async () => {
   try {
-    await Keychain.deleteGenericPassword(ACCESS_TOKEN_KEY);
+    await Keychain.resetGenericPassword();
     console.log('Access token removed from keychain.');
     return true;
   } catch (error) {
@@ -50,4 +56,4 @@ const getCurrentUserId = async () => {
     return null;
   }
 };
-export { storeAccessToken, getAccessToken, deleteAccessToken,getCurrentUserId };
+export { storeAccessToken, getAccessToken, deleteAccessToken, getCurrentUserId };

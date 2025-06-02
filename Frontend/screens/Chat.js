@@ -1,8 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Image, Pressable, TextInput, Dimensions, LogBox, Alert } from 'react-native';
-import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
-import { useWindowDimensions } from 'react-native'; 
 import { API_URL } from '@env';
 import axios from 'axios';
 import { getAccessToken, getCurrentUserId } from '../utilities/keychainUtils';
@@ -132,55 +130,7 @@ const BuyingChats = () => {
   );
 };
 
-const SellingChats = () => {
-  const navigation = useNavigation();
-  const screenWidth = Dimensions.get('window').width;
-
-  return (
-    <View style={styles.scene}>
-      <Image style={[styles.noChatImage, { width: screenWidth * 0.9, height: screenWidth * 0.9 * (180 / 370), marginVertical: '5%' }]} source={require('../assets/images/noChat.png')} resizeMode="contain" />
-      <Text style={styles.noChatText}>You've got no messages so far!</Text>
-      <Pressable style={styles.post} onPress={() => navigation.navigate('Sell')}>
-        <Text style={styles.postText}>Start Selling</Text>
-      </Pressable>
-    </View>
-  );
-};
-
-const renderScene = SceneMap({
-  buying: BuyingChats,
-  selling: SellingChats,
-});
-
-const renderTabBar = (props) => (
-  <TabBar
-    {...props}
-    indicatorStyle={styles.indicator}
-    style={styles.tabBar}
-    labelStyle={styles.label}
-    activeColor="#fff"
-    inactiveColor="#fff"
-  />
-);
-
-export default function ChatTabs() {
-  const screenWidth = Dimensions.get('window').width;
-  const [index, setIndex] = React.useState(0);
-  const [routes] = React.useState([
-    { key: 'buying', title: 'Buying' },
-    { key: 'selling', title: 'Selling' },
-  ]);
-
-  return (
-    <TabView
-      navigationState={{ index, routes }}
-      renderScene={renderScene}
-      onIndexChange={setIndex}
-      initialLayout={{ width: screenWidth }}
-      renderTabBar={renderTabBar}
-    />
-  );
-}
+export default BuyingChats;
 
 const styles = StyleSheet.create({
   safeArea: {
