@@ -14,58 +14,57 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import React, {useState, useEffect} from 'react';
-import {useNavigation, useRoute} from '@react-navigation/native';
-import {launchCamera} from 'react-native-image-picker';
-import { useWindowDimensions } from 'react-native'; 
+import React, { useState, useEffect } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useWindowDimensions } from 'react-native';
 import { getCurrentUserId, getAccessToken } from '../utilities/keychainUtils';
-import axios from 'axios'; 
-import { API_URL } from '@env' 
+import axios from 'axios';
+import { API_URL } from '@env'
 
 const ProductInfo = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const {product} = route.params; // Extract product from route parameters
-  const {width: screenWidth} = useWindowDimensions();
+  const { product } = route.params; // Extract product from route parameters
+  const { width: screenWidth } = useWindowDimensions();
   const [imageUri, setImageUri] = useState(null);
-  
+
   const handleChatPress = async () => {
-    try { 
-    const token = await getAccessToken();
-        if (!token) {
-            Alert.alert('Authentication Required', 'Please log in to post an item.');
-            navigation.navigate('Login');
-            return;
-    }
-    const participant_id1 = await getCurrentUserId();
-    const participant_id2 = product.seller._id;
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        Alert.alert('Authentication Required', 'Please log in to post an item.');
+        navigation.navigate('Login');
+        return;
+      }
+      const participant_id1 = await getCurrentUserId();
+      const participant_id2 = product.seller._id;
 
-    const response = await axios.post(`${API_URL}/Chat/create`, {
-      participant_id1,
-      participant_id2,
-    }, {
-      headers: {
-         Authorization: `Bearer ${token}`,
-      },
-    });
+      const response = await axios.post(`${API_URL}/Chat/create`, {
+        participant_id1,
+        participant_id2,
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    console.log('Chat created:', response.data.data);
+      console.log('Chat created:', response.data.data);
       navigation.navigate('Conversation', {
-        chatId: response.data.data._id, 
+        chatId: response.data.data._id,
         receiverId: participant_id2,
         receiverName: product.seller.fullName,
         receiverDetails: `${product.seller.course} - ${product.seller.program}`,
         receiverImage: typeof product.seller?.ProfilePicture === 'string' ? product.seller.ProfilePicture : null,
       });
-  } catch (error) {
-    console.error('Error creating chat:', error);
-  }
-};
+    } catch (error) {
+      console.error('Error creating chat:', error);
+    }
+  };
 
   // Use the product data to determine the image source
   // Assuming your product object has an 'Productpicture' property which is the URI
   const productImageSource = product?.image
-    ? {uri: product.image}
+    ? { uri: product.image }
     : require('../assets/images/university.png'); // Fallback image
 
   // Convert the createdAt timestamp to a Date object
@@ -82,7 +81,7 @@ const ProductInfo = () => {
   const formattedDate = createdAtDate.toLocaleDateString('en-IN', options); // Using 'en-IN' locale for India
 
   const navigateToPayment = product => {
-    navigation.navigate('Payment', {product});
+    navigation.navigate('Payment', { product });
   };
 
   const makeCall = () => {
@@ -114,19 +113,6 @@ const ProductInfo = () => {
     }
   };
 
-  const handleTakePhoto = async () => {
-    await requestCameraPermission();
-    launchCamera({mediaType: 'photo'}, response => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.errorCode) {
-        console.log('ImagePicker Error: ', response.errorMessage);
-      } else if (response.assets && response.assets.length > 0) {
-        setImageUri(response.assets[0].uri);
-      }
-    });
-  };
-
   const onShare = async () => {
     try {
       const result = await Share.share({
@@ -153,21 +139,21 @@ const ProductInfo = () => {
   };
 
   return (
-    <View style={{flex: 1}}>
+    <View style={{ flex: 1 }}>
       <ScrollView
-        style={{backgroundColor: 'white', flexGrow: 1}}
+        style={{ backgroundColor: 'white', flexGrow: 1 }}
         showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()}>
             <Image source={require('../assets/icons/icons8-back-24.png')} />
           </Pressable>
-          <Pressable style={{flex: 1, marginLeft: 10}}>
-            <View style={[styles.searchbar, {width: '100%'}]}>
+          <Pressable style={{ flex: 1, marginLeft: 10 }}>
+            <View style={[styles.searchbar, { width: '100%' }]}>
               <Image source={require('../assets/icons/icons8-search-24.png')} />
               <TextInput
                 placeholder="Search here"
                 placeholderTextColor={'#555'}
-                style={{fontSize: 17, color: 'black', flex: 1, marginRight: 10}}
+                style={{ fontSize: 17, color: 'black', flex: 1, marginRight: 10 }}
               />
             </View>
           </Pressable>
@@ -180,18 +166,18 @@ const ProductInfo = () => {
             marginHorizontal: 20,
           }}>
           {product?.createdAt && (
-            <View style={{display:'flex', flexDirection:'column'}}>
-              <Text style={{color: 'black', fontSize: 16, marginTop: 4, marginLeft: 4}}>
+            <View style={{ display: 'flex', flexDirection: 'column' }}>
+              <Text style={{ color: 'black', fontSize: 16, marginTop: 4, marginLeft: 4 }}>
                 Uploaded On
               </Text>
-              <Text style={{color: 'black', fontSize: 12, marginLeft: 4}}>
+              <Text style={{ color: 'black', fontSize: 12, marginLeft: 4 }}>
                 {formattedDate}
               </Text>
             </View>
           )}
         </Text>
 
-        <View style={{alignItems: 'center'}}>
+        <View style={{ alignItems: 'center' }}>
           <ImageBackground
             style={{
               width: screenWidth * 0.85,
@@ -236,12 +222,12 @@ const ProductInfo = () => {
             Price: ₹ {String(product?.price)}
           </Text>
           {product?.quantity && (
-            <Text style={{color: 'black', fontSize: 17, marginBottom: 15}}>
+            <Text style={{ color: 'black', fontSize: 17, marginBottom: 15 }}>
               Quantity: {String(product?.quantity)}
             </Text>
           )}
           {product?.status && (
-            <Text style={{color: 'black', fontSize: 17, marginBottom: 15}}>
+            <Text style={{ color: 'black', fontSize: 17, marginBottom: 15 }}>
               Status: {String(product?.status)}
             </Text>
           )}
@@ -254,8 +240,8 @@ const ProductInfo = () => {
             }}>
             Description:
           </Text>
-          <View style={[styles.descriptionBox, {width: '100%'}]}>
-            <Text style={{color: 'black', fontSize: 17}}>
+          <View style={[styles.descriptionBox, { width: '100%' }]}>
+            <Text style={{ color: 'black', fontSize: 17 }}>
               {product?.description || '- No description provided -'}
             </Text>
           </View>
@@ -264,7 +250,7 @@ const ProductInfo = () => {
               <Image
                 source={require('../assets/icons/icons8-handshake-30.png')}
               />
-              <Text style={{fontSize: 20, color: 'white', fontWeight: 'bold'}}>
+              <Text style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>
                 Close Deal
               </Text>
             </View>
@@ -289,19 +275,21 @@ const ProductInfo = () => {
             }}>
             Posted by:
           </Text>
-          <View style={styles.postedByContainer}>
-            <Image 
-              style={{ width: 40, height: 40, borderRadius: 20 }}
-              source={product.seller.ProfilePicture
-                ? {uri:product.seller.ProfilePicture}
-                : require('../assets/images/user.png')
-              }
-            />
-            <Text style={styles.postedByText}>
-              <Text style={{ fontWeight: 'bold' }}>{product?.seller.fullName}</Text>
-              {'\n'}{product?.seller.course} - {product.seller.program}
-            </Text>
-          </View>
+          <Pressable>
+            <View style={styles.postedByContainer}>
+              <Image
+                style={{ width: 40, height: 40, borderRadius: 20 }}
+                source={product.seller.ProfilePicture
+                  ? { uri: product.seller.ProfilePicture }
+                  : require('../assets/images/user.png')
+                }
+              />
+              <Text style={styles.postedByText}>
+                <Text style={{ fontWeight: 'bold' }}>{product?.seller.fullName}</Text>
+                {'\n'}{product?.seller.course} - {product.seller.program}
+              </Text>
+            </View>
+          </Pressable>
           {/* Display the formatted creation date */}
         </View>
       </ScrollView>
