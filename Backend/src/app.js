@@ -16,12 +16,10 @@ app.use(express.json())
   
 import userRoutes from './routes/user.routes.js' 
 import PostRoutes from './routes/post.routes.js' 
-import Dealroutes from './routes/deal.routes.js' 
 import Threadroutes from './routes/echoes.routes.js' 
 import Chatroutes from './routes/chat.routes.js'
 app.use('/user', userRoutes) 
 app.use('/post', PostRoutes) 
-app.use('/deal',Dealroutes)
 app.use('/echoes', Threadroutes) 
 app.use('/Chat',Chatroutes)
 app.get("/",(req,res) => { 
