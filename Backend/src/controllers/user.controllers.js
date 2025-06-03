@@ -62,7 +62,6 @@ const sendotp = asyncHandler(async (req, res) => {
   }
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(otpStore)
     return res.status(200).json(new ApiResponse(201, null, "Email sent successfully"));
   } catch (error) {
     console.log(error);
@@ -76,9 +75,7 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!otpStore || Date.now() > otpStore.expiresAt) {
     throw new apiError(401, "OTP expired or invalid.");
   }
-  console.log(otpStore)
   if (parseInt(otp) !== otpStore[email]?.otp) {
-    console.log(parseInt(otp), otpStore.otp, parseInt(otp) !== otpStore.otp)
     throw new apiError(402, "Wrong OTP.");
   }
 
@@ -255,8 +252,6 @@ const GetUserProfile = asyncHandler(async (req, res) => {
   if (!user) { 
     throw new apiError(404, "User not Found !") 
   }
-  
-  console.log('Populated user:', user); // Debug log
   
   return res.status(200).json(
     new ApiResponse(200, user, "user Found SuccessFully !")

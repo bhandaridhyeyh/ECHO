@@ -6,7 +6,7 @@ import { API_URL } from '@env'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storeAccessToken } from '../utilities/keychainUtils'; // Import the storeAccessToken function
 import Icon from 'react-native-vector-icons/Ionicons';
-
+import socket from '../utilities/socket.js';
 const { width, height } = Dimensions.get('window');
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -34,7 +34,9 @@ const Login = () => {
 
         if (storedSuccessfully) {  
           console.log(userObject)
-          await AsyncStorage.setItem('tradeMateUserId',userObject._id);
+          await AsyncStorage.setItem('tradeMateUserId', userObject._id); 
+          socket.connect(); // connect manually
+          socket.emit("register", userObject._id);
           Alert.alert("Login Successful!");
           navigation.navigate("Main");
         } else {

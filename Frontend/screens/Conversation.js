@@ -12,74 +12,59 @@ import {
   Pressable,
   Linking,
 } from 'react-native';
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import io from 'socket.io-client';
-import { API_URL } from '@env';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { getCurrentUserId } from '../utilities/keychainUtils';
-
-const SOCKET_SERVER_URL = API_URL;
+import { getCurrentUserId } from '../utilities/keychainUtils.js';
+import socket from '../utilities/socket.js';
 
 export default function Conversation() {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [showPrompts, setShowPrompts] = useState(true);
   const flatListRef = useRef(null);
-  const socket = useRef(null);
   const navigation = useNavigation();
   const route = useRoute();
-  const { chatId, receiverId, receiverName, receiverDetails, receiverImage } = route.params;
+  const { chatId, chat,receiverId, receiverName, receiverDetails, receiverImage } = route.params;
   const [userId, setUserId] = useState(null);
 
   const prompts = ['Hello!', 'Can we meet?', 'Discount?', 'Close deal?'];
 
   useEffect(() => {
-    const fetchUserId = async () => {
+    (async () => {
       const id = await getCurrentUserId();
       setUserId(id);
-    };
-    fetchUserId();
+    })();
   }, []);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
-      if (flatListRef.current) {
-        flatListRef.current.scrollToEnd({ animated: true });
-      }
+      flatListRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !receiverId) return;
 
-    socket.current = io(SOCKET_SERVER_URL, {
-      transports: ['websocket'], // optional: improves connection stability
-    });
+    if (!socket.connected) socket.connect();
+      
+    socket.emit(
+      'getChatHistory',
+      { userId, receiverId },
+      (chatHistory) => { 
+        console.log('chatHistory received:', chatHistory);
+        // This callback will receive chatHistory from the server
+        const formatted = chatHistory.messages.map((msg) => ({
+          id: msg._id,
+          text: msg.content,
+          sender: msg.sender._id === userId ? 'me' : 'other',
+          status: msg.status,
+          timestamp: msg.timestamp,
+        })); 
+        setMessages(formatted);
+        scrollToBottom();
 
-    socket.current.on('connect', () => {
-      console.log('Socket connected');
-      socket.current.emit('register', userId);
-
-      if (!userId || !receiverId) return;
-
-      socket.current.emit('getChatHistory', userId, receiverId);
-    }, [userId, receiverId]);
-
-    socket.current.on('chatHistory', (chatHistory) => {
-      const formattedMessages = chatHistory.map(msg => ({
-        id: msg._id,
-        text: msg.content,
-        sender: msg.sender === userId ? 'me' : 'other',
-        status: msg.status,
-        timestamp: msg.timestamp,
-      }));
-      setMessages(formattedMessages);
-      scrollToBottom();
-    });
-
-    socket.current.on('receiveMessage', (message) => {
-      console.log('Message received:', message);
+      });
+    const handleReceiveMessage = (message) => {
       const newMessage = {
         id: message._id,
         text: message.content,
@@ -87,59 +72,64 @@ export default function Conversation() {
         status: message.status,
         timestamp: message.timestamp,
       };
-      setMessages(prev => [...prev, newMessage]);
+      setMessages((prev) => [...prev, newMessage]);
       scrollToBottom();
-    });
+    };
 
-    socket.current.on('messageStatusUpdate', (update) => {
-      setMessages(prev =>
-        prev.map(msg =>
+    const handleStatusUpdate = (update) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
           msg.id === update._id ? { ...msg, status: update.status } : msg
         )
       );
-    });
+    };
+
+    socket.on('receive-message', handleReceiveMessage);
+    socket.on('messageStatusUpdate', handleStatusUpdate);
 
     return () => {
-      if (socket.current) {
-        socket.current.disconnect();
-        socket.current.off();
-      }
+      socket.off('receive-message', handleReceiveMessage);
+      socket.off('messageStatusUpdate', handleStatusUpdate);
     };
   }, [userId, receiverId, scrollToBottom]);
 
   const sendMessage = () => {
-    const trimmedMessage = inputMessage.trim();
-    if (!trimmedMessage || !userId || !receiverId) return;
-
+    const trimmed = inputMessage.trim();
+    if (!trimmed || !userId || !receiverId) return;
     const tempId = Date.now().toString();
     const newMessage = {
       id: tempId,
-      text: trimmedMessage,
+      text: trimmed,
       sender: 'me',
       status: 'sending',
       timestamp: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     setInputMessage('');
     scrollToBottom();
-
-    socket.current.emit('sendMessage', userId, receiverId, trimmedMessage, (ackMessage) => {
-      if (ackMessage && ackMessage._id) {
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === tempId
-              ? {
-                ...msg,
-                id: ackMessage._id,
-                status: ackMessage.status,
-                timestamp: ackMessage.timestamp,
-              }
-              : msg
-          )
-        );
+      
+    socket.emit(
+      'sendMessage',
+      { chatId:chatId,senderId: userId, receiverId, content: trimmed },
+      (ackMessage) => { 
+        if (ackMessage?._id) { 
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === tempId
+                ? {
+                    ...msg,
+                    id: ackMessage._id,
+                    status: ackMessage.status,
+                    timestamp: ackMessage.timestamp,
+                  }
+                : msg
+            )
+          );
+        }
       }
-    });
+    ); 
+
   };
 
   const handlePromptClick = (prompt) => {
@@ -152,19 +142,17 @@ export default function Conversation() {
   };
 
   const renderMessage = ({ item }) => {
-    const isMyMessage = item.sender === 'me';
+    const isMine = item.sender === 'me';
     return (
       <View
         style={[
           styles.messageContainer,
-          isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer,
+          isMine ? styles.myMessageContainer : styles.otherMessageContainer,
         ]}
       >
         <Text style={styles.messageText}>{item.text}</Text>
-        {item.status && (
-          <Text style={styles.statusText}>
-            {isMyMessage ? item.status : ''}
-          </Text>
+        {item.status && isMine && (
+          <Text style={styles.statusText}>{item.status}</Text>
         )}
       </View>
     );
@@ -190,9 +178,7 @@ export default function Conversation() {
             }
           />
           <View style={styles.userName}>
-            <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 17 }}>
-              {receiverName}
-            </Text>
+            <Text style={styles.userNameText}>{receiverName}</Text>
             <Text style={{ color: 'black' }}>{receiverDetails}</Text>
           </View>
           <Pressable onPress={makeCall}>
@@ -205,16 +191,16 @@ export default function Conversation() {
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         style={styles.chatList}
         onContentSizeChange={scrollToBottom}
       />
 
       {showPrompts && (
         <View style={styles.promptsContainer}>
-          {prompts.map((prompt, index) => (
+          {prompts.map((prompt, idx) => (
             <Pressable
-              key={index}
+              key={idx}
               onPress={() => handlePromptClick(prompt)}
               style={styles.prompt}
             >
@@ -230,9 +216,9 @@ export default function Conversation() {
           placeholder="Type a message..."
           placeholderTextColor="grey"
           value={inputMessage}
-          onChangeText={text => {
+          onChangeText={(text) => {
             setInputMessage(text);
-            setShowPrompts(false);
+            if (text.length > 0) setShowPrompts(false);
           }}
         />
         <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
@@ -296,6 +282,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ddd',
   },
   userName: { width: 210 },
+  userNameText: { color: 'black', fontWeight: 'bold', fontSize: 17 },
   promptsContainer: {
     position: 'absolute',
     bottom: 75,

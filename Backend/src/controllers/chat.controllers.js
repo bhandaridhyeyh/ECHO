@@ -41,41 +41,26 @@ const GetAllUserChats = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, chats, "Chats fetched."));
 });
 
-const GetChatHistory = asyncHandler(async (req, res) => {
-  const { chatId } = req.params;
-  if (!chatId) throw new apiError(400, "Chat ID is required.");
-
-  const messages = await Message.find({ chat: chatId })
-    .populate("sender", "fullName ProfilePicture")
-    .populate("receiver", "fullName ProfilePicture")
-    .sort({ createdAt: 1 });
-
-  return res.status(200).json(new ApiResponse(200, messages, "Chat history fetched."));
-});
-
 const handleSendMessage = async (socket, io, data, callback) => {
-  try {
-    const { senderId, receiverId, content, chatId } = data;
-
+  try {  
+    const { senderId, receiverId, content, chatId } = data; 
     if (!senderId || !receiverId || !content || !chatId) {
       return callback({ error: "Missing required fields." });
     }
-
     const message = await Message.create({
       chat: chatId,
       sender: senderId,
       receiver: receiverId,
       content
     });
-
     if (!message) return callback({ error: "Failed to save message." });
-
     const receiverSocketId = onlineusers.get(receiverId);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("receive-message", message);
+      io.to(receiverSocketId).emit("receive-message", message); 
+      console.log("message sent !")
     } else {
       await Notification.create({
-        type: "chat",
+        type: "message",
         from: senderId,
         to: receiverId,
         message: `New message from ${senderId}`,
@@ -83,16 +68,45 @@ const handleSendMessage = async (socket, io, data, callback) => {
       });
     }
 
-    callback({ success: true, message });
+    callback({ success: true, message }); 
+
   } catch (error) {
     console.error(error);
     callback({ error: "Server error while sending message." });
+  } 
+
+}; 
+
+const getChatHistory = async (socket, io, data, callback) => {
+  try {
+    const { userId, receiverId } = data;
+    if (!userId || !receiverId) {
+      return callback({ error: "Missing userId or receiverId." });
+    }
+    // Sort participants array for consistent querying
+    const participantsSorted = [userId, receiverId].sort();
+    const chat = await Chat.findOne({ participants: participantsSorted }); 
+    if (!chat) {
+      return callback({ success: true, messages: [] }); // No chat yet, empty history
+    }
+    
+    const messages = await Message.find({ chat: chat._id })
+      .populate('sender', 'fullName ProfilePicture')
+      .populate('receiver', 'fullName ProfilePicture')
+      .sort({ createdAt: 1 });
+    if (!messages) {  
+      callback({error:"failed to fetch the messages"})
+    }
+    callback({ success: true, messages });
+  } catch (error) {
+    console.error("Error fetching chat history:", error);
+    callback({ error: "Server error while fetching chat history." });
   }
 };
 
 export {
   CreatChat,
   GetAllUserChats,
-  GetChatHistory,
-  handleSendMessage
+  handleSendMessage,
+  getChatHistory
 };

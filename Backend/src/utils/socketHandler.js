@@ -1,13 +1,13 @@
 import { handleRequestDeal,handleResponseDeal} from "../controllers/Deal.controllers.js";
-import { handleSendMessage } from "../controllers/chat.controllers.js"; 
+import { handleSendMessage,getChatHistory} from "../controllers/chat.controllers.js"; 
 import Notification from "../models/notifications.models.js"
 const onlineusers = new Map();
 const socketHandler = (io) => {
     io.on('connection', (socket) => {
         console.log("user id is :", socket.id)
-        
-        socket.on('register', async (userId) => {
-            onlineusers.set(userId, socket.id) // mapping userid to socket.id for online user to keep a track of which online user has which id !
+        socket.on('register', async (userId) => { 
+            onlineusers.set(userId, socket.id)  // mapping userid to socket.id for online user to keep a track of which online user has which id !
+            console.log(onlineusers)
             const pendingNotifications = await Notification.find({ to: userId, seen: false })
             if (pendingNotifications.length > 0) {
                 io.to(socket.id).emit("pending-notifications", pendingNotifications);
@@ -21,8 +21,11 @@ const socketHandler = (io) => {
         });
         socket.on('response-deal', (data, callback) => {
             handleResponseDeal(socket, io, data, callback);
-        })
-        socket.on('send-message', (data, callback) => {
+        }) 
+        socket.on('getChatHistory', (data, callback) => {
+            getChatHistory(socket, io, data, callback);
+        });
+        socket.on('sendMessage', (data, callback) => {
             handleSendMessage(socket, io, data, callback);
         }) 
         socket.on("disconnect", () => {
@@ -31,7 +34,9 @@ const socketHandler = (io) => {
                     onlineusers.delete(userId);
                     break;
                 }
-            }
+            }  
+            console.log(onlineusers)
+            console.log("disconencted succesfully ")
         })
     })
 }

@@ -21,7 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { getAccessToken, deleteAccessToken } from '../utilities/keychainUtils';
-
+import socket from '../utilities/socket.js';
 const dummyProfileData = {
     name: 'Rohan Sharma',
     email: 'aryan.patel@navuni.edu.in',
@@ -160,7 +160,8 @@ const Profile = () => {
     };
 
     const handleLogout = async () => {
-        try {
+        try {  
+            socket.disconnect();
             await deleteAccessToken();
             await AsyncStorage.removeItem('tradeMateUserId');
             navigation.reset({
