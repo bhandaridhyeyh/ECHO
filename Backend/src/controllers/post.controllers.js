@@ -72,8 +72,9 @@ const CreatePost = asyncHandler(async (req, res) => {
         .json(new ApiResponse(201, Post, "Succesfull Sell Post Creation !")); 
 });  
 
-const UpdatePost = asyncHandler(async (req, res) => {
-  const { postId, title, description, price, quantity } = req.body
+const UpdatePost = asyncHandler(async (req, res) => { 
+  const postId = req.params
+  const {title, description, price, quantity } = req.body
   const updatedPost = await Sellpost.User.findByIdAndUpdate(postId, {
     $set: {
       title: title,
