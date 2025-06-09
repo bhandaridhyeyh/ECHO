@@ -1,11 +1,12 @@
 import { StyleSheet, Text, View, Image, FlatList, ScrollView, Pressable, TextInput, Alert, RefreshControl, LogBox } from 'react-native';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { FloatingAction } from 'react-native-floating-action';
 import axios from 'axios';
 import { getAccessToken } from '../utilities/keychainUtils'; // Import the storeAccessToken function
 import { API_URL } from '@env'
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const Home = ({ route }) => {
 
@@ -17,14 +18,14 @@ const Home = ({ route }) => {
 
     const actions = [{
         text: 'Sell',
-        icon: require('../assets/icons/icons8-sell-24.png'),
+        icon: <Icon name="wallet" size={22} color="white" />,
         name: 'sell_item',
         position: 1,
         color: '#555'
     },
     {
         text: 'Ask',
-        icon: require('../assets/icons/icons8-ask-question-24(1).png'),
+        icon: <Icon name="help-circle" size={22} color="white" />,
         name: 'ask',
         position: 2,
         color: '#555',
@@ -101,6 +102,32 @@ const Home = ({ route }) => {
         fetchPosts();
     }, []);
 
+    const categories = ['books', 'notes', 'tools', 'gadgets'];
+
+    const categoryImages = {
+        books: require('../assets/images/icons8-books-100.png'),
+        notes: require('../assets/images/icons8-notes-100.png'),
+        tools: require('../assets/images/icons8-tools-100.png'),
+        gadgets: require('../assets/images/icons8-gadgets-100.png'),
+    };
+    const categoryRefs = {
+        books: useRef(null),
+        notes: useRef(null),
+        tools: useRef(null),
+        gadgets: useRef(null),
+    };
+
+    const scrollViewRef = useRef();
+
+    const scrollToCategory = (category) => {
+        categoryRefs[category]?.current?.measureLayout(
+            scrollViewRef.current,
+            (x, y) => {
+                scrollViewRef.current.scrollTo({ y, animated: true });
+            }
+        );
+    };
+
     const renderItem = ({ item }) => (
         <View style={styles.card2}>
             <Pressable onPress={() => navigateToProductInfo(item)}>
@@ -122,6 +149,7 @@ const Home = ({ route }) => {
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
             <ScrollView
+                ref={scrollViewRef}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
@@ -147,7 +175,7 @@ const Home = ({ route }) => {
                 {/* Search Bar */}
                 <Pressable>
                     <View style={styles.searchbar}>
-                        <Image source={require('../assets/icons/icons8-search-24.png')} />
+                        <Icon name="search" size={24} color="grey" />
                         <TextInput
                             placeholder="What are you looking for?"
                             placeholderTextColor={'#555'}
@@ -196,22 +224,12 @@ const Home = ({ route }) => {
 
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                <Pressable style={styles.card}>
-                                    <Image source={require('../assets/images/icons8-books-100.png')} style={{ height: 80, width: 80 }} />
-                                    <Text style={{ color: 'black', fontSize: 13 }}>BOOKS</Text>
-                                </Pressable>
-                                <Pressable style={styles.card}>
-                                    <Image source={require('../assets/images/icons8-notes-100.png')} style={{ height: 80, width: 80 }} />
-                                    <Text style={{ color: 'black', fontSize: 13 }}>NOTES</Text>
-                                </Pressable>
-                                <Pressable style={styles.card}>
-                                    <Image source={require('../assets/images/icons8-tools-100.png')} style={{ height: 80, width: 80 }} />
-                                    <Text style={{ color: 'black', fontSize: 13 }}>TOOLS</Text>
-                                </Pressable>
-                                <Pressable style={styles.card}>
-                                    <Image source={require('../assets/images/icons8-smartphone-tablet-100.png')} style={{ height: 80, width: 80 }} />
-                                    <Text style={{ color: 'black', fontSize: 13 }}>GADGETS</Text>
-                                </Pressable>
+                                {categories.map((cat) => (
+                                    <Pressable key={cat} style={styles.card} onPress={() => scrollToCategory(cat)}>
+                                        <Image source={categoryImages[cat]} style={{ height: 80, width: 80 }} />
+                                        <Text style={{ color: 'black', fontSize: 13 }}>{cat.toUpperCase()}</Text>
+                                    </Pressable>
+                                ))}
                             </View>
                         </ScrollView>
 
@@ -235,9 +253,11 @@ const Home = ({ route }) => {
                         </View>
 
                         {/* Filtered category lists */}
-                        {['books', 'notes', 'tools', 'gadgets'].map((category) => (
-                            <View key={category}>
-                                <Text style={{ color: 'black', marginTop: 25, fontSize: 18, paddingLeft: 20 }}>{category.charAt(0).toUpperCase() + category.slice(1)}</Text>
+                        {categories.map((category) => (
+                            <View key={category} ref={categoryRefs[category]}>
+                                <Text style={{ color: 'black', marginTop: 25, fontSize: 18, paddingLeft: 20 }}>
+                                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                                </Text>
                                 <FlatList
                                     data={recentlyAddedItems.filter(item => item.category === category)}
                                     keyExtractor={(item) => item._id?.toString() ?? Math.random().toString()}
@@ -264,10 +284,7 @@ const Home = ({ route }) => {
                 }}
                 floatingIcon={
                     <View>
-                        <Image
-                            source={require('../assets/icons/icons8-add-100.png')}
-                            style={{ width: 30, height: 30 }}
-                        />
+                        <Icon name="add-circle-outline" size={30} color="white" />
                     </View>
                 }
                 floatingIconWidth={50}

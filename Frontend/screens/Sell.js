@@ -14,15 +14,16 @@ import {
     Dimensions,
     ActivityIndicator, // Import ActivityIndicator
 } from 'react-native';
-import React, {useState} from 'react';
-import {Dropdown} from 'react-native-element-dropdown';
-import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
-import {useNavigation} from '@react-navigation/native';
+import React, { useState } from 'react';
+import { Dropdown } from 'react-native-element-dropdown';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
-import {getAccessToken} from '../utilities/keychainUtils'; // Import getAccessToken
-import { API_URL} from '@env'
+import { getAccessToken } from '../utilities/keychainUtils'; // Import getAccessToken
+import { API_URL } from '@env'
+import Icon from 'react-native-vector-icons/Ionicons';
 
-const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const Sell = () => {
     const [value, setValue] = useState(null);
@@ -35,18 +36,18 @@ const Sell = () => {
     const [loading, setLoading] = useState(false); // State for loader
 
     const data = [
-        {label: 'Books', value: 'books'},
-        {label: 'Notes', value: 'notes'},
-        {label: 'Tools', value: 'tools'},
-        {label: 'Gadgets', value: 'gadgets'},
+        { label: 'Books', value: 'books' },
+        { label: 'Notes', value: 'notes' },
+        { label: 'Tools', value: 'tools' },
+        { label: 'Gadgets', value: 'gadgets' },
     ];
 
     const course = [
-        {label: '1', value: '1'},
-        {label: '2', value: '2'},
-        {label: '3', value: '3'},
-        {label: '4', value: '4'},
-        {label: '5', value: '5'},
+        { label: '1', value: '1' },
+        { label: '2', value: '2' },
+        { label: '3', value: '3' },
+        { label: '4', value: '4' },
+        { label: '5', value: '5' },
     ];
 
     const handlePost = async () => {
@@ -112,7 +113,7 @@ const Sell = () => {
     };
 
     const handleSelectImage = () => {
-        launchImageLibrary({mediaType: 'photo'}, response => {
+        launchImageLibrary({ mediaType: 'photo' }, response => {
             if (response.assets && response.assets.length > 0) {
                 setimageUri(response.assets[0].uri);
             }
@@ -145,7 +146,7 @@ const Sell = () => {
 
     const handleTakePhoto = async () => {
         await requestCameraPermission();
-        launchCamera({mediaType: 'photo'}, response => {
+        launchCamera({ mediaType: 'photo' }, response => {
             if (response.didCancel) {
                 console.log('User cancelled image picker');
             } else if (response.errorCode) {
@@ -161,29 +162,26 @@ const Sell = () => {
     };
 
     return (
-        <SafeAreaView style={{flex: 1}}>
+        <SafeAreaView style={{ flex: 1 }}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{paddingBottom: screenHeight * 0.05}}>
-                <Text style={styles.heading}>What are you offering?</Text>
+                contentContainerStyle={{ paddingBottom: screenHeight * 0.05 }}>
+                <View style={{ flexDirection: 'row', marginLeft: screenWidth * 0.02, marginTop: screenHeight * 0.02, alignItems: 'center', gap: screenWidth * 0.02 }}>
+                    <Icon name="chevron-back" size={30} color="#000" onPress={() => navigation.goBack()} />
+                    <Text style={styles.heading}>What are you offering?</Text>
+                </View>
                 <View style={styles.container}>
                     <Text style={styles.labels}>
                         Upload an image of your product
-                        <Text style={{verticalAlign: 'top'}}>*</Text> :
+                        <Text style={{ verticalAlign: 'top' }}>*</Text> :
                     </Text>
-                    <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
                         <Pressable onPress={handleSelectImage} style={styles.btn}>
-                            <Image
-                                source={require('../assets/icons/icons8-gallery-24.png')}
-                                style={styles.btnIcon}
-                            />
+                            <Icon name="images-outline" size={24} color="#fff" />
                             <Text style={styles.btnText}>Select from Gallery</Text>
                         </Pressable>
                         <Pressable onPress={handleTakePhoto} style={styles.btn}>
-                            <Image
-                                source={require('../assets/icons/icons8-white-camera-24.png')}
-                                style={styles.btnIcon}
-                            />
+                            <Icon name="camera-outline" size={24} color="#fff" />
                             <Text style={styles.btnText}>Take Photo</Text>
                         </Pressable>
                     </View>
@@ -191,7 +189,7 @@ const Sell = () => {
                         <View style={styles.imagePreviewContainer}>
                             <View style={styles.imageWrapper}>
                                 <Image
-                                    source={{uri: imageUri}}
+                                    source={{ uri: imageUri }}
                                     style={styles.image}
                                     resizeMode="contain"
                                 />
@@ -206,7 +204,7 @@ const Sell = () => {
                 </View>
                 <View style={styles.details}>
                     <Text style={styles.labels}>
-                        Category<Text style={{verticalAlign: 'top'}}>*</Text> :{' '}
+                        Category<Text style={{ verticalAlign: 'top' }}>*</Text> :{' '}
                     </Text>
                     <Dropdown
                         style={styles.dropdown}
@@ -214,9 +212,9 @@ const Sell = () => {
                         labelField="label"
                         valueField="value"
                         placeholder="Select category"
-                        placeholderStyle={{color: '#555', fontSize: screenWidth * 0.04}}
-                        itemTextStyle={{color: 'black'}}
-                        selectedTextStyle={{color: 'black'}}
+                        placeholderStyle={{ color: '#555', fontSize: screenWidth * 0.04 }}
+                        itemTextStyle={{ color: 'black' }}
+                        selectedTextStyle={{ color: 'black' }}
                         value={value}
                         onChange={item => setValue(item.value)}
                     />
@@ -224,7 +222,7 @@ const Sell = () => {
 
                 <View style={styles.details}>
                     <Text style={styles.labels}>
-                        Quantity<Text style={{verticalAlign: 'top'}}>*</Text> :{' '}
+                        Quantity<Text style={{ verticalAlign: 'top' }}>*</Text> :{' '}
                     </Text>
                     <Dropdown
                         style={styles.dropdown}
@@ -232,9 +230,9 @@ const Sell = () => {
                         labelField="label"
                         valueField="value"
                         placeholder="1"
-                        placeholderStyle={{color: 'black', fontSize: screenWidth * 0.04}}
-                        itemTextStyle={{color: 'black'}}
-                        selectedTextStyle={{color: 'black'}}
+                        placeholderStyle={{ color: 'black', fontSize: screenWidth * 0.04 }}
+                        itemTextStyle={{ color: 'black' }}
+                        selectedTextStyle={{ color: 'black' }}
                         value={usage}
                         onChange={item => setUsage(item.value)}
                     />
@@ -242,7 +240,7 @@ const Sell = () => {
 
                 <View style={styles.details}>
                     <Text style={styles.labels}>
-                        Add title<Text style={{verticalAlign: 'top'}}>*</Text> :{' '}
+                        Add title<Text style={{ verticalAlign: 'top' }}>*</Text> :{' '}
                     </Text>
                     <TextInput
                         placeholder="Name of your product"
@@ -254,7 +252,7 @@ const Sell = () => {
                 </View>
                 <View style={styles.details}>
                     <Text style={styles.labels}>
-                        Add description<Text style={{verticalAlign: 'top'}}>*</Text> :{' '}
+                        Add description<Text style={{ verticalAlign: 'top' }}>*</Text> :{' '}
                     </Text>
                     <TextInput
                         multiline={true}
@@ -265,14 +263,14 @@ const Sell = () => {
                         value={description}
                         onChangeText={text => setDescription(text)}
                     />
-                    <Text style={{color: 'black', fontSize: screenWidth * 0.03}}>
+                    <Text style={{ color: 'black', fontSize: screenWidth * 0.03 }}>
                         Include condition, features and reason for selling
                     </Text>
                 </View>
 
                 <View style={styles.details}>
                     <Text style={styles.labels}>
-                        Set Price<Text style={{verticalAlign: 'top'}}>*</Text> :{' '}
+                        Set Price<Text style={{ verticalAlign: 'top' }}>*</Text> :{' '}
                     </Text>
                     <View style={styles.input2}>
                         <Text
@@ -323,8 +321,6 @@ const styles = StyleSheet.create({
         color: 'black',
         fontSize: screenWidth * 0.065,
         fontWeight: 'bold',
-        marginVertical: screenHeight * 0.025,
-        marginLeft: screenWidth * 0.04,
     },
     details: {
         flexDirection: 'column',
@@ -384,11 +380,11 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     container: {
-        marginVertical: screenHeight * 0.015,
-        marginBottom: screenHeight * 0.05,
+        marginTop: screenHeight * 0.05,
         marginLeft: screenWidth * 0.04,
         gap: screenHeight * 0.01,
         width: screenWidth * 0.92,
+        marginBottom: screenHeight * 0.02,
     },
     btn: {
         borderRadius: 5,

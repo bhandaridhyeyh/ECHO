@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View, SafeAreaView, Image, KeyboardAvoidingView, TextInput, Pressable, Alert, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import React, { useState, useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';  
-import { API_URL } from '@env' 
+import axios from 'axios';
+import { API_URL } from '@env'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storeAccessToken } from '../utilities/keychainUtils'; // Import the storeAccessToken function
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -30,11 +30,10 @@ const Login = () => {
         const { accessToken, userObject } = response.data.data; // Adjust based on your actual response structure
 
         // Store the access token securely using keychainUtils
-        const storedSuccessfully = await storeAccessToken(accessToken); 
+        const storedSuccessfully = await storeAccessToken(accessToken);
 
-        if (storedSuccessfully) {  
-          console.log(userObject)
-          await AsyncStorage.setItem('tradeMateUserId', userObject._id); 
+        if (storedSuccessfully) {
+          await AsyncStorage.setItem('tradeMateUserId', userObject._id);
           socket.connect(); // connect manually
           socket.emit("register", userObject._id);
           Alert.alert("Login Successful!");
@@ -110,7 +109,7 @@ const Login = () => {
             {loading ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Image source={require('../assets/icons/icons8-arrow-50.png')} style={styles.btnIcon} />
+              <Icon name="arrow-forward" size={31} color="white" style={styles.btnIcon} />
             )}
           </Pressable>
           <Pressable onPress={() => navigation.navigate("Register")}>

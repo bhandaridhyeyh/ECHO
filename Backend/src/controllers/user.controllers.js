@@ -1,11 +1,13 @@
 import { apiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/users.models.js";
+import { Product } from '../models/product.models.js';
 import ApiResponse from "../utils/apiResponse.js";
 import { UploadOnCloud } from "../utils/cloudinary.js";
 import nodemailer from 'nodemailer';
 import jwt from "jsonwebtoken";
 import 'dotenv/config'
+import mongoose from "mongoose";
 
 const genrateAccessTokenandRefreshToken = async function (userId) {
   try {
@@ -106,18 +108,18 @@ const registerUser = asyncHandler(async (req, res) => {
     }, "successfull user creation and & login !"))
 })
 
-const complete_profile = asyncHandler(async (req, res) => {  
-    const { fullName,enrollmentYear, university, course, program,contactNumber} = req.body  
-    if ([enrollmentYear, university, course,program,contactNumber].some((i) => i == null || (typeof i === 'string' && i.trim() === ""))) {  
-        throw new apiError(401, "One of the required fields is missing or empty!");
-    } 
-  const normalizedData = { 
-      fullName : fullName,
-      enrollmentYear: enrollmentYear.trim(),
-      university: university.trim().toUpperCase(), 
-      course: course.trim().toUpperCase(),
-      program: program.trim().toUpperCase(), 
-      contactNumber: validateAndNormalizeContactNumber(contactNumber)
+const complete_profile = asyncHandler(async (req, res) => {
+  const { fullName, enrollmentYear, university, course, program, contactNumber } = req.body
+  if ([enrollmentYear, university, course, program, contactNumber].some((i) => i == null || (typeof i === 'string' && i.trim() === ""))) {
+    throw new apiError(401, "One of the required fields is missing or empty!");
+  }
+  const normalizedData = {
+    fullName: fullName,
+    enrollmentYear: enrollmentYear.trim(),
+    university: university.trim().toUpperCase(),
+    course: course.trim().toUpperCase(),
+    program: program.trim().toUpperCase(),
+    contactNumber: validateAndNormalizeContactNumber(contactNumber)
   };
 
   function validateAndNormalizeContactNumber(contactNumber) {
@@ -244,15 +246,15 @@ const logoutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged out !"));
 });
 
-const GetUserProfile = asyncHandler(async (req, res) => {  
+const GetUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user?._id)
     .select("-password -refreshToken")
     .populate('sellPosts'); // Use the virtual name
-    
-  if (!user) { 
-    throw new apiError(404, "User not Found !") 
+
+  if (!user) {
+    throw new apiError(404, "User not Found !")
   }
-  
+
   return res.status(200).json(
     new ApiResponse(200, user, "user Found SuccessFully !")
   )
@@ -332,4 +334,40 @@ const getUserProducts = asyncHandler(async (req, res) => {
   }
 });
 
-export { sendotp, registerUser, complete_profile, loginUser, logoutUser, DeleteUser, GetUserProfile, updateUserProfilePicture, getUserProducts }
+const GetUserProfileById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const getProductsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check both ObjectId and string (fallback if data was saved incorrectly)
+    const objectId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : null;
+
+    const products = await Product.find({
+      $or: [
+        { seller: objectId },
+        { seller: userId }, // fallback if seller is stored as string
+      ],
+    });
+
+    console.log('Found products:', products);
+
+    return res.status(200).json(products); // always return array
+  } catch (error) {
+    console.error('Error fetching products by userId:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export { sendotp, registerUser, complete_profile, loginUser, logoutUser, DeleteUser, GetUserProfile, updateUserProfilePicture, getUserProducts, GetUserProfileById, getProductsByUserId }

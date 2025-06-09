@@ -1,9 +1,23 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Image, Pressable, TextInput, Dimensions, LogBox, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Image,
+  Pressable,
+  TextInput,
+  Dimensions,
+  LogBox,
+  Alert,
+  ScrollView,
+  RefreshControl,
+} from 'react-native';
 import { API_URL } from '@env';
 import axios from 'axios';
 import { getAccessToken, getCurrentUserId } from '../utilities/keychainUtils';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 LogBox.ignoreLogs([
   'A props object containing a "key" prop is being spread into JSX',
@@ -14,34 +28,37 @@ const BuyingChats = () => {
   const [filteredChats, setFilteredChats] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
   const navigation = useNavigation();
   const screenWidth = Dimensions.get('window').width;
 
-  useEffect(() => {
-    const fetchChats = async () => {
-      try {
-        const currentUserId = await getCurrentUserId();
-        setCurrentUserId(currentUserId);
-        const token = await getAccessToken();
-        if (!token) {
-          Alert.alert('Authentication Required', 'Please log in to post an item.');
-          navigation.navigate('Login');
-          return;
-        }
-        const res = await axios.get(`${API_URL}/Chat/all`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          }
-        });
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
-        setChats(data);
-        setFilteredChats(data);
-      } catch (err) {
-        console.log('Error fetching chats:', JSON.stringify(err, null, 2));
+  const fetchChats = useCallback(async () => {
+    try {
+      const currentUserId = await getCurrentUserId();
+      setCurrentUserId(currentUserId);
+      const token = await getAccessToken();
+      if (!token) {
+        Alert.alert('Authentication Required', 'Please log in to post an item.');
+        navigation.navigate('Login');
+        return;
       }
-    };
+      const res = await axios.get(`${API_URL}/Chat/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+      const data = Array.isArray(res.data.data) ? res.data.data : [];
+      setChats(data);
+      setFilteredChats(data);
+    } catch (err) {
+      console.log('Error fetching chats:', JSON.stringify(err, null, 2));
+    }
+  }, [navigation]);
+
+  useEffect(() => {
     fetchChats();
-  }, []);
+  }, [fetchChats]);
 
   const handleSearch = (text) => {
     setSearchText(text);
@@ -56,16 +73,19 @@ const BuyingChats = () => {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchChats();
+    setRefreshing(false);
+  };
+
   return (
     <SafeAreaView style={{ backgroundColor: 'white', flex: 1 }}>
       <Text style={styles.heading}>Chats</Text>
       <View style={styles.header}>
         <Pressable style={{ width: '100%', alignItems: 'center' }}>
           <View style={[styles.searchbar, { width: screenWidth * 0.9 }]}>
-            <Image
-              source={require('../assets/icons/icons8-search-24.png')}
-              style={styles.searchIcon}
-            />
+            <Icon name="search" size={24} color="grey" style={{ marginRight: 5 }} />
             <TextInput
               placeholder="Search from your chats"
               placeholderTextColor="#555"
@@ -77,7 +97,12 @@ const BuyingChats = () => {
         </Pressable>
       </View>
 
-      <View style={styles.details}>
+      <ScrollView
+        style={styles.details}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {filteredChats.length === 0 ? (
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
             No chats found.
@@ -95,6 +120,7 @@ const BuyingChats = () => {
                       receiverId: otherUser._id,
                       receiverName: otherUser.fullName,
                       receiverDetails: `${otherUser.course} - ${otherUser.program}`,
+                      receiverContact: otherUser.contactNumber,
                       receiverImage: typeof otherUser?.ProfilePicture === 'string' ? otherUser.ProfilePicture : null,
                     })
                   }
@@ -125,7 +151,7 @@ const BuyingChats = () => {
             );
           })
         )}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -185,11 +211,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: '2%',
     paddingVertical: '1%',
-  },
-  searchIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
   },
   searchInput: {
     fontSize: 17,

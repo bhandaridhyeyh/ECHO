@@ -1,10 +1,12 @@
 import { StyleSheet, Text, View, Alert, Image, SafeAreaView, Pressable, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import React, { useState, useRef } from 'react';
-import { useFocusEffect } from '@react-navigation/native';  
+import React, { useState, useRef, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
-import axios from 'axios'; 
+import axios from 'axios';
 import { getAccessToken } from '../utilities/keychainUtils';
-import { API_URL} from '@env'
+import { API_URL } from '@env'
+import Icon from 'react-native-vector-icons/Ionicons';
+
 const Ask = () => {
   const [isFlagged, setIsFlagged] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
@@ -12,23 +14,41 @@ const Ask = () => {
   const textInputRef = useRef(null);
   const navigation = useNavigation();
   const prompts = ['Is this available?', 'Looking for notes', 'Can anyone lend this?'];
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = await getAccessToken();
+      const response = await axios.get(`${API_URL}/user/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUser(response.data);
+    };
+    fetchUser();
+  }, []);
 
   const handleImagePress = () => {
     setIsFlagged(!isFlagged);
   };
 
-  if (isFlagged) {
-    Alert.alert(
-      "Flagged!",
-      "Flags the post as urgent and important, making it visible at the top for others to notice."
-    );
-  }
+  useEffect(() => {
+    if (isFlagged) {
+      Alert.alert(
+        "Flagged!",
+        "Flags the post as urgent and important, making it visible at the top for others to notice."
+      );
+    }
+  }, [isFlagged]);
 
   useFocusEffect(
     React.useCallback(() => {
-      if (textInputRef.current) {
-        textInputRef.current.focus();
-      }
+      const timer = setTimeout(() => {
+        if (textInputRef.current) {
+          textInputRef.current.focus();
+        }
+      }, 300); // 300ms delay to allow screen to settle
+
+      return () => clearTimeout(timer);
     }, [])
   );
 
@@ -38,36 +58,36 @@ const Ask = () => {
   };
 
   const handlePostClick = async () => {
-    try { 
+    try {
       const token = await getAccessToken();
       if (!token) {
-          Alert.alert('Authentication Required', 'Please log in to post an item.');
-          navigation.navigate('Login'); // Redirect to login if no token
-            return;
-      } 
+        Alert.alert('Authentication Required', 'Please log in to post an item.');
+        navigation.navigate('Login'); // Redirect to login if no token
+        return;
+      }
 
       const response = await axios.post(`${API_URL}/echoes/creat`, {
         content: inputMessage,
         markedAsFlagged: isFlagged,  // Send flag status
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-      }); 
-      
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+        });
+
       if (response.status === 201) {
         Alert.alert("Success", "Echo Posted Successfully!");
         setInputMessage('');
         setShowPrompts(true);
-        setIsFlagged(false);  
+        setIsFlagged(false);
         navigation.navigate('Echoes');
       }
     }
-    catch (error) { 
+    catch (error) {
       console.log('Error Posting:', JSON.stringify(error, null, 2));
       Alert.alert("Error", "Failed to post. Please try again.");
-     }
+    }
   };
 
   return (
@@ -81,7 +101,15 @@ const Ask = () => {
 
         <View style={styles.inputContainer}>
           <View style={{ flexDirection: 'row', marginHorizontal: 10 }}>
-            <Image source={require('../assets/icons/icons8-male-user-50.png')} />
+            {user?.data?.ProfilePicture ? (
+              <Image
+                source={{ uri: user.data.ProfilePicture }}
+                style={{ width: 40, height: 40, borderRadius: 20, marginTop: 5, marginRight: 5 }}
+              />
+            ) : (
+              <Icon name="person-circle-outline" size={40} color="#888" />
+            )}
+
             <TextInput
               ref={textInputRef}
               multiline={true}
@@ -120,21 +148,19 @@ const Ask = () => {
 
       <View style={styles.footer}>
         <TouchableOpacity onPress={handleImagePress}>
-          <Image
-            source={
-              isFlagged
-                ? require('../assets/icons/icons8-flag-24(1).png')
-                : require('../assets/icons/icons8-flag-24.png')
-            }
-          />
+          {isFlagged ? (
+            <Icon name="flag" size={20} color="red" />
+          ) : (
+            <Icon name="flag-outline" size={20} color="red" />
+          )}
         </TouchableOpacity>
 
         {!isFlagged ? (
-          <Text style={{ color: '#555', width: 350, fontSize: 14 }}>
+          <Text style={{ color: '#555', width: 350, fontSize: 15 }}>
             Mark it flagged!
           </Text>
         ) : (
-          <Text style={{ color: '#555' }}>Flagged ✔</Text>
+          <Text style={{ color: '#555', width: 350, fontSize: 15 }}>Flagged <Icon name="checkmark" size={14} color="black" /></Text>
         )}
       </View>
     </SafeAreaView>
@@ -213,5 +239,11 @@ const styles = StyleSheet.create({
   promptText: {
     color: 'grey',
     fontSize: 12
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
   }
 });

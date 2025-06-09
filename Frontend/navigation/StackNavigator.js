@@ -16,7 +16,8 @@ import CompleteProfile from '../screens/CompleteProfile';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Echoes from '../screens/Echoes';
 import Sell from '../screens/Sell';
-import Otp from '../screens/Otp'; // Import the Otp component
+import Otp from '../screens/Otp';
+import OtherUser from '../screens/OtherUser';
 
 const StackNavigator = () => {
     const Stack = createNativeStackNavigator();
@@ -167,6 +168,11 @@ const StackNavigator = () => {
                 <Stack.Screen
                     name="Profile"
                     component={Profile}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="OtherUser"
+                    component={OtherUser}
                     options={{ headerShown: false }}
                 />
                 <Stack.Screen

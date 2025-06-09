@@ -10,23 +10,23 @@ import {
   ImageBackground,
   Linking,
   Share,
-  PermissionsAndroid,
-  Platform,
   Alert,
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useWindowDimensions } from 'react-native';
 import { getCurrentUserId, getAccessToken } from '../utilities/keychainUtils';
 import axios from 'axios';
 import { API_URL } from '@env'
+import Icon from 'react-native-vector-icons/Ionicons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
 const ProductInfo = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { product } = route.params; // Extract product from route parameters
   const { width: screenWidth } = useWindowDimensions();
-  const [imageUri, setImageUri] = useState(null);
 
   const handleChatPress = async () => {
     try {
@@ -38,6 +38,11 @@ const ProductInfo = () => {
       }
       const participant_id1 = await getCurrentUserId();
       const participant_id2 = product.seller._id;
+
+      if (participant_id1 === participant_id2) {
+        Alert.alert("Notice", "You cannot chat with yourself.");
+        return;
+      }
 
       const response = await axios.post(`${API_URL}/Chat/create`, {
         participant_id1,
@@ -84,32 +89,20 @@ const ProductInfo = () => {
     navigation.navigate('Payment', { product });
   };
 
-  const makeCall = () => {
-    const phoneNumber = '6351692454';
-    Linking.openURL(`tel:${phoneNumber}`);
-  };
+  const makeCall = async () => {
+    const participant_id1 = await getCurrentUserId(); // current user
+    const participant_id2 = product?.seller?._id;     // seller
+    const phoneNumber = product?.seller?.contactNumber;
 
-  const requestCameraPermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.CAMERA,
-          {
-            title: 'Camera Permission',
-            message: 'This app needs access to your camera',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
-          },
-        );
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          console.log('You can use the camera');
-        } else {
-          console.log('Camera permission denied');
-        }
-      } catch (err) {
-        console.warn(err);
-      }
+    if (participant_id1 === participant_id2) {
+      Alert.alert("Notice", "You cannot call your own number.");
+      return;
+    }
+
+    if (phoneNumber) {
+      Linking.openURL(`tel:${phoneNumber}`);
+    } else {
+      Alert.alert("Phone number not available.");
     }
   };
 
@@ -145,11 +138,11 @@ const ProductInfo = () => {
         showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()}>
-            <Image source={require('../assets/icons/icons8-back-24.png')} />
+            <Icon name="chevron-back-outline" size={30} color="grey" />
           </Pressable>
           <Pressable style={{ flex: 1, marginLeft: 10 }}>
             <View style={[styles.searchbar, { width: '100%' }]}>
-              <Image source={require('../assets/icons/icons8-search-24.png')} />
+              <Icon name="search" size={24} color="grey" />
               <TextInput
                 placeholder="Search here"
                 placeholderTextColor={'#555'}
@@ -189,11 +182,9 @@ const ProductInfo = () => {
           >
             <View style={styles.icons}>
               <Pressable onPress={onShare}>
-                <Image
-                  source={require('../assets/icons/icons8-share-24.png')}
-                />
+                <MaterialIcons name="share" size={24} color="black" />
               </Pressable>
-              <Image source={require('../assets/icons/icons8-heart-24.png')} />
+              <Icon name="heart-outline" size={24} color="black" />
             </View>
           </ImageBackground>
         </View>
@@ -247,9 +238,7 @@ const ProductInfo = () => {
           </View>
           <Pressable onPress={() => navigateToPayment(product)}>
             <View style={styles.btn}>
-              <Image
-                source={require('../assets/icons/icons8-handshake-30.png')}
-              />
+              <FontAwesome name="handshake-o" size={30} color="white" />
               <Text style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>
                 Close Deal
               </Text>
@@ -275,21 +264,24 @@ const ProductInfo = () => {
             }}>
             Posted by:
           </Text>
-          <Pressable>
+          <Pressable onPress={() => navigation.navigate('OtherUser', { userId: product?.seller?._id })}>
             <View style={styles.postedByContainer}>
               <Image
                 style={{ width: 40, height: 40, borderRadius: 20 }}
-                source={product.seller.ProfilePicture
-                  ? { uri: product.seller.ProfilePicture }
-                  : require('../assets/images/user.png')
+                source={
+                  product?.seller?.ProfilePicture
+                    ? { uri: product.seller.ProfilePicture }
+                    : require('../assets/images/user.png')
                 }
               />
               <Text style={styles.postedByText}>
-                <Text style={{ fontWeight: 'bold' }}>{product?.seller.fullName}</Text>
-                {'\n'}{product?.seller.course} - {product.seller.program}
+                <Text style={{ fontWeight: 'bold' }}>{product?.seller?.fullName}</Text>
+                {'\n'}
+                {product?.seller?.course} - {product?.seller?.program}
               </Text>
             </View>
           </Pressable>
+
           {/* Display the formatted creation date */}
         </View>
       </ScrollView>

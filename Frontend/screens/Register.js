@@ -160,7 +160,7 @@ const Register = () => {
             {loading ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Image source={require('../assets/icons/icons8-arrow-50.png')} style={styles.btnIcon} />
+              <Icon name="arrow-forward" size={31} color="white" style={styles.btnIcon} />
             )}
           </Pressable>
 

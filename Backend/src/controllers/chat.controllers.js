@@ -36,8 +36,7 @@ const GetAllUserChats = asyncHandler(async (req, res) => {
   if (!userId) throw new apiError(400, "Invalid user ID.");
 
   const chats = await Chat.find({ participants: userId })
-    .populate("participants", "fullName program course enrollmentYear ProfilePicture");
-
+    .populate("participants", "fullName program course enrollmentYear ProfilePicture contactNumber");
   return res.status(200).json(new ApiResponse(200, chats, "Chats fetched."));
 });
 
@@ -74,7 +73,6 @@ const handleSendMessage = async (socket, io, data, callback) => {
     console.error(error);
     callback({ error: "Server error while sending message." });
   } 
-
 }; 
 
 const getChatHistory = async (socket, io, data, callback) => {
@@ -91,8 +89,8 @@ const getChatHistory = async (socket, io, data, callback) => {
     }
     
     const messages = await Message.find({ chat: chat._id })
-      .populate('sender', 'fullName ProfilePicture')
-      .populate('receiver', 'fullName ProfilePicture')
+      .populate('sender', 'fullName ProfilePicture contactNumber')
+      .populate('receiver', 'fullName ProfilePicture contactNumber')
       .sort({ createdAt: 1 });
     if (!messages) {  
       callback({error:"failed to fetch the messages"})

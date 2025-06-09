@@ -5,10 +5,10 @@ const productSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-    imageUrls: {
+  imageUrls: {
     type: [String],  // Array of strings for multiple image URLs
     required: true
-}, 
+  },
   category: {
     type: String,
     required: true
@@ -17,14 +17,19 @@ const productSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  Quantity: { 
-    type: int, 
-    required: true, 
-    default: 1, 
-  } 
+  Quantity: {
+    type: Number,
+    required: true,
+    default: 1,
+  },
+  seller: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
 },
-{
-  timestamps: true  
-});
+  {
+    timestamps: true
+  });
 
 export const Product = mongoose.model('Product', productSchema);

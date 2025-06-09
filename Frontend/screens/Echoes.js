@@ -3,23 +3,23 @@ import { StyleSheet, Text, View, Image, Pressable, ScrollView, ActivityIndicator
 import axios from 'axios';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { API_URL } from '@env'   
+import { API_URL } from '@env'
 import { RefreshControl } from 'react-native';
-import { getAccessToken,getCurrentUserId } from '../utilities/keychainUtils'; 
- 
+import { getAccessToken, getCurrentUserId } from '../utilities/keychainUtils';
+
 const Echoes = ({ navigation, route }) => {
-    const [echoes, setEchoes] = useState([]); 
+    const [echoes, setEchoes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
-      
+
     // Dummy data for fallback
     const dummyEchoes = [
         {
             id: '1',
             userName: 'Ishika Patel',
             userId: 'user1',
-            timestamp: '2h', 
+            timestamp: '2h',
             markedasFlag: "false",
             content: 'Looking for notes on quantum mechanics. Anyone have a good resource?',
             userImage: 'https://via.placeholder.com/40',
@@ -41,54 +41,54 @@ const Echoes = ({ navigation, route }) => {
             userImage: 'https://via.placeholder.com/40',
         },
     ];
-     useEffect(() => {
-            if (route.params?.newItem) {
-                fetchEchoes(); // Re-fetch posts to include the new item
-                // Alternatively, if you are certain the backend returns the new item in the next fetch,
-                // you could keep the current approach but be mindful of potential duplication.
-                // setRecentlyAddedItems((prevItems) => [route.params.newItem, ...prevItems]);
-            }
-     }, [route.params?.newItem]); 
-    
+    useEffect(() => {
+        if (route.params?.newItem) {
+            fetchEchoes(); // Re-fetch posts to include the new item
+            // Alternatively, if you are certain the backend returns the new item in the next fetch,
+            // you could keep the current approach but be mindful of potential duplication.
+            // setRecentlyAddedItems((prevItems) => [route.params.newItem, ...prevItems]);
+        }
+    }, [route.params?.newItem]);
+
     useEffect(() => {
         fetchEchoes();
-    }, []); 
-    
-const fetchEchoes = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-        const token = await getAccessToken();
-        if (!token) {
-            Alert.alert('Authentication Required', 'Please log in to post an item.');
-            navigation.navigate('Login');
-            return;
-        }
-        const response = await axios.get(`${API_URL}/echoes/all`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-        const echoes = response.data?.data;
-        if (response.status >= 200 && response.status < 300 && Array.isArray(echoes)) {
-            setEchoes(echoes);
-        } else {
+    }, []);
+
+    const fetchEchoes = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const token = await getAccessToken();
+            if (!token) {
+                Alert.alert('Authentication Required', 'Please log in to post an item.');
+                navigation.navigate('Login');
+                return;
+            }
+            const response = await axios.get(`${API_URL}/echoes/all`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const echoes = response.data?.data;
+            if (response.status >= 200 && response.status < 300 && Array.isArray(echoes)) {
+                setEchoes(echoes);
+            } else {
+                setEchoes(dummyEchoes);
+                Alert.alert("Warning", "Empty or invalid data from server. Using dummy data.");
+            }
+        } catch (err) {
+            console.log('Error:', JSON.stringify(error, null, 2));
             setEchoes(dummyEchoes);
-            Alert.alert("Warning", "Empty or invalid data from server. Using dummy data.");
+            Alert.alert("Error", "Failed to load echoes. Using dummy data.");
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
-    } catch (err) {
-        console.log('Error:', JSON.stringify(error, null, 2));
-        setEchoes(dummyEchoes);
-        Alert.alert("Error", "Failed to load echoes. Using dummy data.");
-    } finally {
-        setLoading(false);
-        setRefreshing(false);
-    }
-};
+    };
 
     const onRefresh = useCallback(() => {
-                    setRefreshing(true);
-                    fetchEchoes();
+        setRefreshing(true);
+        fetchEchoes();
     }, []);
 
     const handleShare = async (userId, content) => {
@@ -113,37 +113,42 @@ const fetchEchoes = async () => {
             Alert.alert(error.message);
         }
         console.log('Sharing echo with user ID:', userId);
-        };
-    const handleChatPress = async(echo) => {
-        try { 
-        const token = await getAccessToken();
+    };
+    const handleChatPress = async (echo) => {
+        try {
+            const token = await getAccessToken();
             if (!token) {
                 Alert.alert('Authentication Required', 'Please log in to post an item.');
                 navigation.navigate('Login');
                 return;
+            }
+            const participant_id1 = await getCurrentUserId();
+            const participant_id2 = echo.user._id;
+
+            if (participant_id1 === participant_id2) {
+                Alert.alert("Notice", "You cannot chat with yourself.");
+                return;
+            }
+
+            const response = await axios.post(`${API_URL}/Chat/create`, {
+                participant_id1,
+                participant_id2,
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            console.log('Chat created:', response.data.data);
+            navigation.navigate('Conversation', {
+                chatId: response.data.data._id,
+                receiverId: participant_id2,
+                receiverName: echo.user.fullName,
+                receiverDetails: `${echo.user.course} - ${echo.user.program}`,
+                receiverImage: typeof echo.user?.ProfilePicture === 'string' ? echo.user.ProfilePicture : null,
+            });
+        } catch (error) {
+            console.error('Error creating chat:', error);
         }
-        const participant_id1 = await getCurrentUserId();
-        const participant_id2 = echo.user._id;
-    
-        const response = await axios.post(`${API_URL}/Chat/create`, {
-          participant_id1,
-          participant_id2,
-        }, {
-          headers: {
-             Authorization: `Bearer ${token}`,
-          },
-        });
-        console.log('Chat created:', response.data.data);
-          navigation.navigate('Conversation', {
-            chatId: response.data.data._id, 
-            receiverId: participant_id2,
-            receiverName: echo.user.fullName,
-            receiverDetails: `${echo.user.course} - ${echo.user.program}`,
-            receiverImage: typeof echo.user?.ProfilePicture === 'string' ? echo.user.ProfilePicture : null,
-          });
-      } catch (error) {
-        console.error('Error creating chat:', error);
-      }
     };
     const renderEchoes = () => {
         if (loading) {
@@ -173,11 +178,11 @@ const fetchEchoes = async () => {
         return (
             echoes.map((echo) => (
                 <View key={echo._id ? echo._id.toString() : echo.id ? echo.id.toString() : `echo-${index}`} style={styles.echoCard}>
-                    <View style={styles.userInfoContainer}>
+                    <View style={styles.userInfoContainer} onPress={() => navigation.navigate('OtherUser', { userId: echo.user._id })}>
                         <Image source={
                             echo?.user?.ProfilePicture ? { uri: echo.user.ProfilePicture } : require('../assets/images/user.png')
                         }
-                        style={styles.userImage} />
+                            style={styles.userImage} />
                         <View style={styles.userInfo}>
                             <Text style={styles.userName}>{echo.user?.fullName}</Text>
                         </View>
@@ -203,7 +208,9 @@ const fetchEchoes = async () => {
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.titleBar}>
-                <Text style={styles.titleText}>Echoes</Text>
+                <Text style={styles.titleText}>ECHOES</Text>
+                <Text style={{ position: 'absolute', right: 45, top: 15, color: '#350f55', fontSize: 16 }} onPress={() => navigation.navigate('Ask')}>Add yours</Text>
+                <Ionicons name="add" size={24} color="#350f55" onPress={() => navigation.navigate('Ask')} style={{ position: 'absolute', right: 16, top: 15 }} />
             </View><ScrollView
                 style={styles.container}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

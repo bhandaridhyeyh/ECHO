@@ -77,7 +77,7 @@ const DeletePost = asyncHandler(async (req, res) => {
 
 });
 const GetallPost = asyncHandler(async (req, res) => { 
-  const posts = await Sellpost.find().populate('seller', 'fullName course program ProfilePicture'); 
+  const posts = await Sellpost.find().populate('seller', 'fullName contactNumber course program ProfilePicture'); 
   res.status(201).json(new ApiResponse(201,posts,"Returned all the posts !"))
 });
 

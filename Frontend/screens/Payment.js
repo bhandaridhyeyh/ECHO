@@ -12,6 +12,8 @@ import React, { useRef,useState, useEffect } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native'; 
 import { getCurrentUserId } from '../utilities/keychainUtils';
 import socket from '../utilities/socket';
+import Icon from 'react-native-vector-icons/Ionicons';
+
 const { width } = Dimensions.get('window');
 
 const Payment = () => {
@@ -139,8 +141,11 @@ useEffect(() => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <View>
-        <Text style={styles.heading}>Deal Summary</Text>
+      <View style={styles.heading}>
+        <Pressable onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back-outline" size={30} color="black" />
+        </Pressable>
+        <Text style={styles.headingText}>Deal Summary</Text>
       </View>
 
       <View style={styles.card}>
@@ -227,10 +232,17 @@ export default Payment;
 const styles = StyleSheet.create({
   heading: {
     color: 'black',
+    fontWeight: 'bold',
+    marginTop: 30,
+    flexDirection: 'row',
+    marginHorizontal: 15,
+  },
+  headingText: {
+    color: 'black',
     fontSize: width * 0.065,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 30,
+    flex: 1,
   },
   card: {
     width: width * 0.9,

@@ -11,6 +11,7 @@ import {
     Dimensions,
     Alert,
     ActivityIndicator,
+    Modal,
     Platform,
     FlatList,
 } from 'react-native';
@@ -37,11 +38,23 @@ const Profile = () => {
     const [profileImage, setProfileImage] = useState('');
     const [userProducts, setUserProducts] = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
+    const [isImageModalVisible, setImageModalVisible] = useState(false);
 
     useEffect(() => {
         fetchProfileData();
         fetchUserProducts();
     }, []);
+
+    const handleProfileImagePress = () => {
+        if (profileData.ProfilePicture) {
+            setImageModalVisible(true);
+        }
+    };
+
+    // Function to close modal
+    const closeModal = () => {
+        setImageModalVisible(false);
+    };
 
     const fetchProfileData = async () => {
         setIsLoading(true);
@@ -101,19 +114,12 @@ const Profile = () => {
                 return;
             }
 
-            console.log('Fetching user profile...');
             const response = await axios.get(`${API_URL}/user/profile`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            // console.log('Profile response:', response.data);
-
             const userData = response.data?.data || response.data;
-            // console.log('User data:', userData);
-
-            // Check for products in both possible fields
             const products = userData?.sellPosts || userData?.userSellpost || [];
-            // console.log('Found products:', products);
 
             setUserProducts(products);
         } catch (error) {
@@ -160,7 +166,7 @@ const Profile = () => {
     };
 
     const handleLogout = async () => {
-        try {  
+        try {
             socket.disconnect();
             await deleteAccessToken();
             await AsyncStorage.removeItem('tradeMateUserId');
@@ -280,12 +286,14 @@ const Profile = () => {
                 {/* Profile Image */}
                 <View style={styles.profileHeaderArea}>
                     <View style={styles.profileImageContainer}>
-                        <Image
-                            source={profileData.ProfilePicture ?
-                                { uri: profileData.ProfilePicture } :
-                                require('../assets/images/user.png')}
-                            style={styles.profileImage}
-                        />
+                        <TouchableOpacity onPress={handleProfileImagePress} activeOpacity={0.8}>
+                            <Image
+                                source={profileData.ProfilePicture ?
+                                    { uri: profileData.ProfilePicture } :
+                                    require('../assets/images/user.png')}
+                                style={styles.profileImage}
+                            />
+                        </TouchableOpacity>
                         <Pressable style={styles.updateButton} onPress={handleImagePick}>
                             <Icon name="add-circle-outline" size={28} color="#fff" />
                         </Pressable>
@@ -375,6 +383,25 @@ const Profile = () => {
                     )}
                 </View>
             </ScrollView>
+            <Modal
+                visible={isImageModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={closeModal}
+            >
+                <TouchableOpacity style={styles.modalOverlay} onPress={closeModal} activeOpacity={1}>
+                    <View style={styles.modalContent}>
+                        <Image
+                            source={{ uri: profileData.ProfilePicture }}
+                            style={styles.enlargedImage}
+                            resizeMode="contain"
+                        />
+                        <TouchableOpacity style={styles.modalCloseButton} onPress={closeModal}>
+                            <Icon name="close-circle" size={36} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -401,7 +428,7 @@ const styles = StyleSheet.create({
     },
     header: {
         height: Platform.OS === 'android' ? 56 : 60,
-        backgroundColor: '#E53935',
+        backgroundColor: '#350f55',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -461,7 +488,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: 'rgba(229, 57, 53, 0.85)',
+        backgroundColor: '#350f5599',
         borderRadius: 16,
         padding: 2,
         shadowColor: '#000',
@@ -583,7 +610,30 @@ const styles = StyleSheet.create({
         color: '#cccccc',
         textAlign: 'center',
         marginTop: 20,
-    }
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        position: 'relative',
+        width: '90%',
+        height: '70%',
+    },
+    enlargedImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 10,
+    },
+    modalCloseButton: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        // zIndex to ensure above image
+        zIndex: 10,
+    },
 });
 
 export default Profile;

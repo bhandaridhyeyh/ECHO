@@ -16,6 +16,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { getCurrentUserId } from '../utilities/keychainUtils.js';
 import socket from '../utilities/socket.js';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function Conversation() {
   const [messages, setMessages] = useState([]);
@@ -24,7 +25,7 @@ export default function Conversation() {
   const flatListRef = useRef(null);
   const navigation = useNavigation();
   const route = useRoute();
-  const { chatId, chat,receiverId, receiverName, receiverDetails, receiverImage } = route.params;
+  const { chatId, chat, receiverId, receiverName, receiverDetails, receiverContact, receiverImage } = route.params;
   const [userId, setUserId] = useState(null);
 
   const prompts = ['Hello!', 'Can we meet?', 'Discount?', 'Close deal?'];
@@ -46,12 +47,11 @@ export default function Conversation() {
     if (!userId || !receiverId) return;
 
     if (!socket.connected) socket.connect();
-      
+
     socket.emit(
       'getChatHistory',
       { userId, receiverId },
-      (chatHistory) => { 
-        console.log('chatHistory received:', chatHistory);
+      (chatHistory) => {
         // This callback will receive chatHistory from the server
         const formatted = chatHistory.messages.map((msg) => ({
           id: msg._id,
@@ -59,7 +59,7 @@ export default function Conversation() {
           sender: msg.sender._id === userId ? 'me' : 'other',
           status: msg.status,
           timestamp: msg.timestamp,
-        })); 
+        }));
         setMessages(formatted);
         scrollToBottom();
 
@@ -108,27 +108,27 @@ export default function Conversation() {
     setMessages((prev) => [...prev, newMessage]);
     setInputMessage('');
     scrollToBottom();
-      
+
     socket.emit(
       'sendMessage',
-      { chatId:chatId,senderId: userId, receiverId, content: trimmed },
-      (ackMessage) => { 
-        if (ackMessage?._id) { 
+      { chatId: chatId, senderId: userId, receiverId, content: trimmed },
+      (ackMessage) => {
+        if (ackMessage?._id) {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === tempId
                 ? {
-                    ...msg,
-                    id: ackMessage._id,
-                    status: ackMessage.status,
-                    timestamp: ackMessage.timestamp,
-                  }
+                  ...msg,
+                  id: ackMessage._id,
+                  status: ackMessage.status,
+                  timestamp: ackMessage.timestamp,
+                }
                 : msg
             )
           );
         }
       }
-    ); 
+    );
 
   };
 
@@ -138,7 +138,11 @@ export default function Conversation() {
   };
 
   const makeCall = () => {
-    Linking.openURL(`tel:${receiverDetails || '0000000000'}`);
+    if (receiverContact) {
+      Linking.openURL(`tel:${receiverContact}`);
+    } else {
+      alert('Phone number not available');
+    }
   };
 
   const renderMessage = ({ item }) => {
@@ -151,9 +155,16 @@ export default function Conversation() {
         ]}
       >
         <Text style={styles.messageText}>{item.text}</Text>
-        {item.status && isMine && (
-          <Text style={styles.statusText}>{item.status}</Text>
+        {item.timestamp && (
+          <Text style={styles.statusText}>
+            {new Date(item.timestamp).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            })}
+          </Text>
         )}
+
       </View>
     );
   };
@@ -167,7 +178,7 @@ export default function Conversation() {
       <SafeAreaView style={{ backgroundColor: 'white' }}>
         <View style={styles.userInfo}>
           <Pressable onPress={() => navigation.goBack()}>
-            <Image source={require('../assets/icons/icons8-back-38.png')} />
+            <Icon name="chevron-back-outline" size={30} color="black" />
           </Pressable>
           <Image
             style={{ width: 40, height: 40, borderRadius: 20 }}
@@ -182,7 +193,7 @@ export default function Conversation() {
             <Text style={{ color: 'black' }}>{receiverDetails}</Text>
           </View>
           <Pressable onPress={makeCall}>
-            <Image source={require('../assets/icons/icons8-make-call-30.png')} />
+            <Icon name="call" size={30} color="black" />
           </Pressable>
         </View>
       </SafeAreaView>
@@ -272,16 +283,17 @@ const styles = StyleSheet.create({
   },
   sendButtonText: { color: '#fff', fontWeight: 'bold' },
   userInfo: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 10,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
   },
-  userName: { width: 210 },
+  userName: { flex: 1, flexDirection: 'column', justifyContent: 'center' },
   userNameText: { color: 'black', fontWeight: 'bold', fontSize: 17 },
   promptsContainer: {
     position: 'absolute',
