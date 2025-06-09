@@ -72,9 +72,33 @@ const CreatePost = asyncHandler(async (req, res) => {
         .json(new ApiResponse(201, Post, "Succesfull Sell Post Creation !")); 
 });  
 
-const UpdatePost = asyncHandler(async (req, res) => {});
-const DeletePost = asyncHandler(async (req, res) => {
+const UpdatePost = asyncHandler(async (req, res) => {
+  const { postId, title, description, price, quantity } = req.body
+  const updatedPost = await Sellpost.User.findByIdAndUpdate(postId, {
+    $set: {
+      title: title,
+      description: description,
+      price: price,
+      quantity: quantity
+    }
+  }, 
+    { new: true }) 
+  if (!updatedPost){  
+      throw new apiError(500,"Failed to Update the Post !")
+  } 
+  return res.status(200).json(new ApiResponse(200,updatedPost,"successfully updated post!"))
+}); 
 
+const DeletePost = asyncHandler(async (req, res) => {
+   const postId = req.params  
+  if (!postId) {  
+    throw new apiError(404,"postId not found!")
+  } 
+  const deletedpost = await Sellpost.findByIdAndDelete(postId) 
+  if (!deletedpost) {  
+    throw new apiError(500, "server failed to delete the post!") 
+  } 
+  res.status(200).json(new ApiResponse(200,"post Deleted Successfully"))
 });
 const GetallPost = asyncHandler(async (req, res) => { 
   const posts = await Sellpost.find().populate('seller', 'fullName contactNumber course program ProfilePicture'); 

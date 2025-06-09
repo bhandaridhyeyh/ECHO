@@ -22,7 +22,6 @@ const OtherUser = () => {
     useEffect(() => {
         if (userId) {
             fetchOtherUserProfile();
-            fetchOtherUserProducts();
         }
     }, [userId]);
 
@@ -32,29 +31,16 @@ const OtherUser = () => {
             const response = await axios.get(`${API_URL}/user/profile/${userId}`, {
                 timeout: 10000,
             });
-            const user = response.data?.data || response.data;
+            const user = response.data?.data || response.data;  
+            const products = user?.sellPosts || user?.userSellpost || []; 
+            console.log(products)
+            setUserProducts(products);
             setProfileData(user);
         } catch (error) {
             console.error('Error fetching other user profile:', error);
             Alert.alert('Error', 'Could not fetch user profile');
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const fetchOtherUserProducts = async () => {
-        setProductsLoading(true);
-        try {
-            const response = await axios.get(`${API_URL}/user/user-products/${userId}`);
-            console.log("Fetching products for userId:", userId);
-            console.log('Fetched products:', response.data);
-            const products = response.data?.data || response.data || [];
-            setUserProducts(products);
-        } catch (error) {
-            console.error('Error fetching other user products:', error);
-            Alert.alert('Error', 'Could not fetch user products');
-        } finally {
-            setProductsLoading(false);
         }
     };
 

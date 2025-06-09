@@ -67,10 +67,7 @@ const userSchema = new mongoose.Schema({
         default: Date.now 
     },
     // Explicitly define userSellpost as an array of references
-    userSellpost: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Sellpost'
-    }]
+    
 }, { 
     timestamps: true,
     toJSON: { virtuals: true }, // Ensure virtuals are included when converting to JSON

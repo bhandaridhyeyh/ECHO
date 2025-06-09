@@ -249,12 +249,11 @@ const logoutUser = asyncHandler(async (req, res) => {
 const GetUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user?._id)
     .select("-password -refreshToken")
-    .populate('sellPosts'); // Use the virtual name
-
+    .populate('sellPosts');  
+  
   if (!user) {
     throw new apiError(404, "User not Found !")
   }
-
   return res.status(200).json(
     new ApiResponse(200, user, "user Found SuccessFully !")
   )
@@ -311,33 +310,10 @@ const DeleteUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, deleteduser, "user deleted successfully"));
 });
 
-// Add this new controller function
-const getUserProducts = asyncHandler(async (req, res) => {
-  try {
-    const user = await User.findById(req.user?._id)
-      .select("-password -refreshToken")
-      .populate({
-        path: 'userSellpost',
-        select: 'title price description image status createdAt',
-        options: { sort: { createdAt: -1 } } // Sort by newest first
-      });
-
-    if (!user) {
-      throw new apiError(404, "User not found");
-    }
-
-    return res.status(200).json(
-      new ApiResponse(200, user.userSellpost, "User products fetched successfully")
-    );
-  } catch (error) {
-    throw new apiError(500, error.message || "Failed to fetch user products");
-  }
-});
-
 const GetUserProfileById = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await User.findById(userId).select('-password');
+    const user = await User.findById(userId).select('-password -refreshToken').populate('sellPosts');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (error) {
@@ -370,4 +346,4 @@ const getProductsByUserId = async (req, res) => {
   }
 };
 
-export { sendotp, registerUser, complete_profile, loginUser, logoutUser, DeleteUser, GetUserProfile, updateUserProfilePicture, getUserProducts, GetUserProfileById, getProductsByUserId }
+export { sendotp, registerUser, complete_profile, loginUser, logoutUser, DeleteUser, GetUserProfile, updateUserProfilePicture, GetUserProfileById, getProductsByUserId }
