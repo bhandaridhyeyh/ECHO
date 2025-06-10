@@ -4,7 +4,7 @@ import { Sellpost } from "../models/sellpost.models.js";
 import { onlineusers } from "../utils/socketHandler.js";
 import Notification from "../models/notifications.models.js";
 
-async function handleRequestDeal(socket, io, data, callback) {  
+async function handleRequestDeal(socket, io, data, callback = () => {}) {  
     try {
         const { sellerId, buyerId, postId } = data 
         const post = await Sellpost.findById(postId); 
@@ -41,14 +41,17 @@ async function handleRequestDeal(socket, io, data, callback) {
             throw new apiError(501,"Failed to genrate the Deal request !")
         }
         } 
-        callback({ success: true, deal }); // goes back to the one who triggered it !!
+        return callback({ success: true, deal }); // goes back to the one who triggered it !!
     }
     catch (error) {
-        callback({error:"internal error"})
+    console.error("Error in handleRequestDeal:", error);
+    if (typeof callback === "function") {
+        callback({ error: "Internal server error" });
+    }
     }
 }   
     
-async function handleResponseDeal(socket, io, data, callback) {
+async function handleResponseDeal(socket, io, data, callback = () => {}) {
     try {
         const { dealId, status } = data;  
         if (!dealId) return callback({ error: "No Deal was found to be settled" });
@@ -74,11 +77,13 @@ async function handleResponseDeal(socket, io, data, callback) {
             const post = await Sellpost.findByIdAndUpdate(deal.postId, { status: "sold" }, { new: true });
             if (!post) return callback({ error: "Failed to update the post status" });
         }
-        callback({ success: true, deal });
+        return callback({ success: true, deal });
     }
-    catch (error) { 
-        console.log(error)
-        callback({ error: "Internal Server Error" });
+    catch (error) {  
+    console.error("Error in handleResponseDeal:", error);
+    if (typeof callback === "function") {
+        callback({ error: "Internal server error" });
+    }
     }
 }
 export {handleRequestDeal, handleResponseDeal}
