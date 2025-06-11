@@ -1,13 +1,13 @@
 import { apiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/users.models.js";
-import { Product } from '../models/product.models.js';
 import ApiResponse from "../utils/apiResponse.js";
 import { UploadOnCloud } from "../utils/cloudinary.js";
 import nodemailer from 'nodemailer';
 import jwt from "jsonwebtoken";
 import 'dotenv/config'
 import mongoose from "mongoose";
+import { Sellpost } from "../models/sellpost.models.js";
 
 const genrateAccessTokenandRefreshToken = async function (userId) {
   try {
@@ -330,7 +330,7 @@ const getProductsByUserId = async (req, res) => {
       ? new mongoose.Types.ObjectId(userId)
       : null;
 
-    const products = await Product.find({
+    const products = await Sellpost.find({
       $or: [
         { seller: objectId },
         { seller: userId }, // fallback if seller is stored as string
