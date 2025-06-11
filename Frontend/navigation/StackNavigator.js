@@ -18,6 +18,7 @@ import Echoes from '../screens/Echoes';
 import Sell from '../screens/Sell';
 import Otp from '../screens/Otp';
 import OtherUser from '../screens/OtherUser';
+import AllPosts from '../screens/AllPosts';
 
 const StackNavigator = () => {
     const Stack = createNativeStackNavigator();
@@ -138,6 +139,11 @@ const StackNavigator = () => {
                 <Stack.Screen
                     name="ProductInfo"
                     component={ProductInfo}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="AllPosts"
+                    component={AllPosts}
                     options={{ headerShown: false }}
                 />
                 <Stack.Screen

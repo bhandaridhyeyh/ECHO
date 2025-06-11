@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, Image, Pressable, ScrollView, ActivityIndicator, Alert, Share } from 'react-native';
+import { StyleSheet, Text, View, Image, Pressable, ScrollView, ActivityIndicator, Alert, Share, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -53,6 +53,35 @@ const Echoes = ({ navigation, route }) => {
     useEffect(() => {
         fetchEchoes();
     }, []);
+
+    const handleUserPress = async (echo) => {
+        try {
+            const token = await getAccessToken();
+            if (!token) {
+                Alert.alert('Authentication Required', 'Please log in to continue.');
+                navigation.navigate('Login');
+                return;
+            }
+
+            const currentUserId = await getCurrentUserId();
+            const targetUserId = echo?.user?._id;
+
+            if (!targetUserId) {
+                Alert.alert('User not found', 'Unable to identify the selected user.');
+                return;
+            }
+
+            if (targetUserId === currentUserId) {
+                navigation.navigate('Profile');
+            } else {
+                navigation.navigate('OtherUser', { userId: targetUserId });
+            }
+        } catch (error) {
+            console.error('Error in handleUserPress:', error);
+            Alert.alert('Error', 'Something went wrong while navigating to the profile.');
+        }
+    };
+
 
     const fetchEchoes = async () => {
         setLoading(true);
@@ -114,6 +143,7 @@ const Echoes = ({ navigation, route }) => {
         }
         console.log('Sharing echo with user ID:', userId);
     };
+
     const handleChatPress = async (echo) => {
         try {
             const token = await getAccessToken();
@@ -150,6 +180,7 @@ const Echoes = ({ navigation, route }) => {
             console.error('Error creating chat:', error);
         }
     };
+
     const renderEchoes = () => {
         if (loading) {
             return (
@@ -178,15 +209,22 @@ const Echoes = ({ navigation, route }) => {
         return (
             echoes.map((echo) => (
                 <View key={echo._id ? echo._id.toString() : echo.id ? echo.id.toString() : `echo-${index}`} style={styles.echoCard}>
-                    <View style={styles.userInfoContainer} onPress={() => navigation.navigate('OtherUser', { userId: echo.user._id })}>
-                        <Image source={
-                            echo?.user?.ProfilePicture ? { uri: echo.user.ProfilePicture } : require('../assets/images/user.png')
-                        }
-                            style={styles.userImage} />
-                        <View style={styles.userInfo}>
-                            <Text style={styles.userName}>{echo.user?.fullName}</Text>
+                    <TouchableOpacity onPress={() => handleUserPress(echo)}>
+                        <View style={styles.userInfoContainer}>
+                            <Image
+                                source={
+                                    echo?.user?.ProfilePicture
+                                        ? { uri: echo.user.ProfilePicture }
+                                        : require('../assets/images/user.png')
+                                }
+                                style={styles.userImage}
+                            />
+                            <View style={styles.userInfo}>
+                                <Text style={styles.userName}>{echo.user?.fullName}</Text>
+                            </View>
                         </View>
-                    </View>
+                    </TouchableOpacity>
+
                     <Text style={styles.echoContent}>{echo.content}</Text>
                     <View style={styles.actionsContainer}>
                         <View style={styles.actionItem}>

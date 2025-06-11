@@ -8,8 +8,8 @@ import {
   Alert,
   Dimensions
 } from 'react-native';
-import React, { useRef,useState, useEffect } from 'react';
-import { useNavigation, useRoute } from '@react-navigation/native'; 
+import React, { useRef, useState, useEffect } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { getCurrentUserId } from '../utilities/keychainUtils';
 import socket from '../utilities/socket';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -27,113 +27,119 @@ const Payment = () => {
     : require('../assets/images/university.png');
 
   const [dealRequested, setDealRequested] = useState(false);
-  const [timer, setTimer] = useState(0);
+  const [timer, setTimer] = useState(300);
   const [dealAccepted, setDealAccepted] = useState(false);
   const [dealExpired, setDealExpired] = useState(false);
 
- const handleRequestDeal = () => {
-  Alert.alert(
-    'Request Deal',
-    'Send a deal request to the seller. If accepted within 5 minutes, the deal will be completed.',
-    [
-      {
-        text: 'Send Request',
-        onPress: async () => {
-          try {
-            const bid = await getCurrentUserId();
-            if (!bid) {
-              Alert.alert('Error', 'User ID not found');
-              return;
-            }
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
-            const data = { sellerId: product.seller._id, buyerId: bid, postId: product._id };
-
-            if (!socket || !socket.connected) {
-              Alert.alert('Error', 'Socket not connected');
-              return;
-            }
-
-            console.log('Emitting request-deal with data:', data);
-
-            socket.emit('request-deal', data, (response) => {
-              console.log('Response from server:', response);
-
-              if (!response) {
-                Alert.alert('Error', 'No response from server');
+  const handleRequestDeal = () => {
+    Alert.alert(
+      'Request Deal',
+      'Send a deal request to the seller. If accepted within 5 minutes, the deal will be completed.',
+      [
+        {
+          text: 'Send Request',
+          onPress: async () => {
+            try {
+              const bid = await getCurrentUserId();
+              if (!bid) {
+                Alert.alert('Error', 'User ID not found');
                 return;
               }
 
-              if (response.error) {
-                Alert.alert('Error', response.error);
-              } else if (response.success) {
-                setDealRequested(true);
-                setDealExpired(false);
-                setDealAccepted(false); 
-                setTimer(300)
-              } else {
-                Alert.alert('Error', 'Unexpected response from server');
+              const data = { sellerId: product.seller._id, buyerId: bid, postId: product._id };
+
+              if (!socket || !socket.connected) {
+                Alert.alert('Error', 'Socket not connected');
+                return;
               }
-            });
-          } catch (err) {
-            console.error('Error in handleRequestDeal:', err);
-            Alert.alert('Error', 'An unexpected error occurred');
-          }
+
+              console.log('Emitting request-deal with data:', data);
+
+              socket.emit('request-deal', data, (response) => {
+                console.log('Response from server:', response);
+
+                if (!response) {
+                  Alert.alert('Error', 'No response from server');
+                  return;
+                }
+
+                if (response.error) {
+                  Alert.alert('Error', response.error);
+                } else if (response.success) {
+                  setDealRequested(true);
+                  setDealExpired(false);
+                  setDealAccepted(false);
+                  setTimer(300)
+                } else {
+                  Alert.alert('Error', 'Unexpected response from server');
+                }
+              });
+            } catch (err) {
+              console.error('Error in handleRequestDeal:', err);
+              Alert.alert('Error', 'An unexpected error occurred');
+            }
+          },
         },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]
-  );
-};
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
-const dealAcceptedRef = useRef(dealAccepted);
+  const dealAcceptedRef = useRef(dealAccepted);
 
-useEffect(() => {
-  dealAcceptedRef.current = dealAccepted;
-}, [dealAccepted]);
+  useEffect(() => {
+    dealAcceptedRef.current = dealAccepted;
+  }, [dealAccepted]);
 
-useEffect(() => {
-  let interval = null;
+  useEffect(() => {
+    if (!dealRequested || dealAccepted || dealExpired || timer <= 0) return;
 
-  if (dealRequested && timer > 0 && !dealAcceptedRef.current) {
-    interval = setInterval(() => {
+    const interval = setInterval(() => {
       setTimer(prev => {
-        if (prev <= 1 && !dealAcceptedRef.current) {
-          setDealExpired(true);
+        if (prev <= 1) {
           clearInterval(interval);
+          setDealExpired(true);
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  }
 
-  return () => clearInterval(interval);
-}, [dealRequested]); 
-  
-useEffect(() => {
-  if (!socket) return;
+    return () => clearInterval(interval);
+  }, [dealRequested, dealAccepted, dealExpired, timer]);
 
-  const handleDealResponse = (deal) => {
-    console.log("Received deal response:", deal);
+  useEffect(() => {
+    if (!socket) return;
 
-    if (deal.status === 'accepted') {
-      setDealAccepted(true);
-      setDealExpired(false);
-      setTimer(0);
-      Alert.alert('Deal Accepted', 'The seller has accepted your request.');
-    } else if (deal.status === 'rejected') {
-      setDealAccepted(false);
-      setDealExpired(true);
-      setTimer(0);
-      Alert.alert('Deal Rejected', 'The seller has rejected your request.');
-    }
-  };
+    const handleDealResponse = async (deal) => {
+      console.log("Received deal response:", deal);
 
-  socket.on('deal-response', handleDealResponse);
+      if (deal.status === 'accepted') {
+        setDealAccepted(true);
+        setDealExpired(false);
+        setTimer(0);
+        Alert.alert('Deal Accepted', 'The seller has accepted your request.');
 
-  return () => {
-    socket.off('deal-response', handleDealResponse);
-  };
-}, [socket]);
+      } else if (deal.status === 'rejected') {
+        setDealAccepted(false);
+        setDealExpired(true);
+        setTimer(0);
+        Alert.alert('Deal Rejected', 'The seller has rejected your request.');
+      }
+    };
+
+    socket.on('deal-response', handleDealResponse);
+
+    return () => {
+      socket.off('deal-response', handleDealResponse);
+    };
+  }, [socket]);
 
   const navigateToProductInfo = (product) => {
     navigation.navigate('ProductInfo', { product });
@@ -208,7 +214,7 @@ useEffect(() => {
 
       {dealRequested && !dealAccepted && !dealExpired && (
         <Text style={styles.statusText}>
-          Waiting for seller to accept... {timer}s left
+          Waiting for seller to accept... {formatTime(timer)}s left
         </Text>
       )}
 
@@ -220,7 +226,7 @@ useEffect(() => {
 
       {dealExpired && !dealAccepted && (
         <Text style={[styles.statusText, { color: 'red' }]}>
-          Seller didn’t respond in time. Deal Expired.
+          Seller didn’t respond in time or deal expired.
         </Text>
       )}
     </SafeAreaView>

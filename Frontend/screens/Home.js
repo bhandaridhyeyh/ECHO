@@ -61,7 +61,8 @@ const Home = ({ route }) => {
                     headers: { Authorization: `Bearer ${token}` }, // ✅ Corrected string interpolation
                 });
                 if (response.status >= 200 && response.status < 300) {
-                    setRecentlyAddedItems(response.data.data);
+                    const unsoldItems = response.data.data.filter(item => item.status !== 'sold');
+                    setRecentlyAddedItems(unsoldItems);
                 } else {
                     Alert.alert('Error', 'Failed to fetch posts.');
                     console.error('Failed to fetch posts:', response);

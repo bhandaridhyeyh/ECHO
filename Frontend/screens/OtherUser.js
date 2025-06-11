@@ -62,7 +62,7 @@ const OtherUser = () => {
                     styles.productStatus,
                     item.Status?.toLowerCase() === 'sold' ? styles.soldStatus : styles.availableStatus
                 ]}>
-                    {item.Status || 'Available'}
+                    {item.Status.toUpperCase() || 'Available'}
                 </Text>
             </View>
         </TouchableOpacity>
@@ -175,6 +175,24 @@ const OtherUser = () => {
                     </View>
                 </View>
 
+                <TouchableOpacity
+                    style={styles.messageButton}
+                    onPress={() =>
+                        navigation.navigate('Conversation', {
+                            receiverId: profileData._id,
+                            receiverName: profileData.fullName,
+                            receiverDetails: `${profileData.course} - ${profileData.program}`,
+                            receiverContact: profileData.contactNumber,
+                            receiverImage: typeof profileData?.ProfilePicture === 'string' ? profileData.ProfilePicture : null,
+                        })
+                    }
+                >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <Icon name="chatbubble-outline" size={20} color="#fff" />
+                        <Text style={styles.messageButtonText}>Message</Text>
+                    </View>
+                </TouchableOpacity>
+
                 {/* User's Products Section */}
                 <View style={styles.productsSection}>
                     <Text style={styles.sectionTitle}>Listed Products</Text>
@@ -196,7 +214,7 @@ const OtherUser = () => {
                             <Text style={styles.emptyStateText}>No products listed yet</Text>
                             <TouchableOpacity
                                 style={styles.addButton}
-                                onPress={() => navigation.navigate('AddProduct')}
+                                onPress={() => navigation.navigate('Sell')}
                             >
                             </TouchableOpacity>
                         </View>
@@ -311,6 +329,22 @@ const styles = StyleSheet.create({
         color: '#0066CC',
         fontWeight: '500',
     },
+    messageButton: {
+        backgroundColor: '#350f55',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        alignSelf: 'center',
+        marginTop: 10,
+        marginBottom: 20,
+        width: '90%',
+    },
+    messageButtonText: {
+        color: 'white',
+        fontSize: 20,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
     divider: {
         width: '100%',
         height: StyleSheet.hairlineWidth,
@@ -329,8 +363,9 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     productList: {
-        justifyContent: 'space-between',
         marginBottom: 15,
+        gap: width * 0.01,
+        width: '100%',
     },
     productCard: {
         width: '30%',  // Changed from '48%' to '30%' to fit 3 columns

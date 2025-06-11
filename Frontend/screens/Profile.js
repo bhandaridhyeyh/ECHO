@@ -233,9 +233,9 @@ const Profile = () => {
         const status = (item.Status || item.status || 'Available').toUpperCase();
 
         return (
-            <TouchableOpacity
+            <Pressable
                 style={styles.productCard}
-                onPress={() => navigation.navigate('ProductInfo', { product: item })}
+                onPress={() => navigateToProductInfo(item)}
             >
                 <Image
                     source={item.image ? { uri: item.image } : require('../assets/images/university.png')}
@@ -251,8 +251,15 @@ const Profile = () => {
                         {status}
                     </Text>
                 </View>
-            </TouchableOpacity>
+            </Pressable>
         );
+    };
+
+    const navigateToProductInfo = (item) => {
+        navigation.navigate('AllPosts', {
+            selectedProduct: item,
+            allProducts: userProducts,
+        });
     };
 
     if (isLoading && !profileData.name) {
@@ -376,7 +383,7 @@ const Profile = () => {
                             <Text style={styles.emptyStateText}>No products listed yet</Text>
                             <TouchableOpacity
                                 style={styles.addButton}
-                                onPress={() => navigation.navigate('AddProduct')}
+                                onPress={() => navigation.navigate('Sell')}
                             >
                             </TouchableOpacity>
                         </View>
@@ -551,8 +558,9 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     productList: {
-        justifyContent: 'space-between',
         marginBottom: 15,
+        gap: width * 0.01,
+        width: '100%',
     },
     productCard: {
         width: '30%',  // Changed from '48%' to '30%' to fit 3 columns

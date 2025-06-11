@@ -131,6 +131,15 @@ const ProductInfo = () => {
     }
   };
 
+  const handleSellerPress = async () => {
+    const currentUserId = await getCurrentUserId();
+    if (product?.seller?._id === currentUserId) {
+      navigation.navigate('Profile');
+    } else {
+      navigation.navigate('OtherUser', { userId: product?.seller?._id });
+    }
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -212,14 +221,27 @@ const ProductInfo = () => {
             }}>
             Price: ₹ {String(product?.price)}
           </Text>
+          {product?.Status && (
+            <Text
+              style={{
+                color: 'black',
+                fontSize: 17,
+                marginBottom: 15,
+                color:
+                  product?.Status === 'available'
+                    ? 'green'
+                    : product?.Status === 'sold'
+                      ? 'red'
+                      : 'orange',
+              }}
+            >
+              Status: {String(product?.Status).toUpperCase()}
+            </Text>
+
+          )}
           {product?.quantity && (
             <Text style={{ color: 'black', fontSize: 17, marginBottom: 15 }}>
               Quantity: {String(product?.quantity)}
-            </Text>
-          )}
-          {product?.status && (
-            <Text style={{ color: 'black', fontSize: 17, marginBottom: 15 }}>
-              Status: {String(product?.status)}
             </Text>
           )}
           <Text
@@ -236,14 +258,16 @@ const ProductInfo = () => {
               {product?.description || '- No description provided -'}
             </Text>
           </View>
-          <Pressable onPress={() => navigateToPayment(product)}>
-            <View style={styles.btn}>
-              <FontAwesome name="handshake-o" size={30} color="white" />
-              <Text style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>
-                Close Deal
-              </Text>
-            </View>
-          </Pressable>
+          {product.status !== 'sold' && (
+            <Pressable onPress={() => navigateToPayment(product)}>
+              <View style={styles.btn}>
+                <FontAwesome name="handshake-o" size={30} color="white" />
+                <Text style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>
+                  Close Deal
+                </Text>
+              </View>
+            </Pressable>
+          )}
         </View>
 
         <View
@@ -264,7 +288,7 @@ const ProductInfo = () => {
             }}>
             Posted by:
           </Text>
-          <Pressable onPress={() => navigation.navigate('OtherUser', { userId: product?.seller?._id })}>
+          <Pressable onPress={handleSellerPress}>
             <View style={styles.postedByContainer}>
               <Image
                 style={{ width: 40, height: 40, borderRadius: 20 }}

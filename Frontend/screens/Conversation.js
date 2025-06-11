@@ -180,18 +180,22 @@ export default function Conversation() {
           <Pressable onPress={() => navigation.goBack()}>
             <Icon name="chevron-back-outline" size={30} color="black" />
           </Pressable>
-          <Image
-            style={{ width: 40, height: 40, borderRadius: 20 }}
-            source={
-              receiverImage
-                ? { uri: receiverImage }
-                : require('../assets/images/user.png')
-            }
-          />
-          <View style={styles.userName}>
-            <Text style={styles.userNameText}>{receiverName}</Text>
-            <Text style={{ color: 'black' }}>{receiverDetails}</Text>
-          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('OtherUser', { userId: receiverId })} style={styles.userInfo1}>
+
+            <Image
+              style={{ width: 40, height: 40, borderRadius: 20 }}
+              source={
+                receiverImage
+                  ? { uri: receiverImage }
+                  : require('../assets/images/user.png')
+              }
+            />
+            <View style={styles.userName}>
+              <Text style={styles.userNameText}>{receiverName}</Text>
+              <Text style={{ color: 'black' }}>{receiverDetails}</Text>
+            </View>
+
+          </TouchableOpacity>
           <Pressable onPress={makeCall}>
             <Icon name="call" size={30} color="black" />
           </Pressable>
@@ -207,19 +211,21 @@ export default function Conversation() {
         onContentSizeChange={scrollToBottom}
       />
 
-      {showPrompts && (
-        <View style={styles.promptsContainer}>
-          {prompts.map((prompt, idx) => (
-            <Pressable
-              key={idx}
-              onPress={() => handlePromptClick(prompt)}
-              style={styles.prompt}
-            >
-              <Text style={styles.promptText}>{prompt}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      {
+        showPrompts && (
+          <View style={styles.promptsContainer}>
+            {prompts.map((prompt, idx) => (
+              <Pressable
+                key={idx}
+                onPress={() => handlePromptClick(prompt)}
+                style={styles.prompt}
+              >
+                <Text style={styles.promptText}>{prompt}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )
+      }
 
       <View style={styles.inputContainer}>
         <TextInput
@@ -236,7 +242,7 @@ export default function Conversation() {
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingView >
   );
 }
 
@@ -288,12 +294,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
   },
-  userName: { flex: 1, flexDirection: 'column', justifyContent: 'center' },
+  userInfo1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 10,
+    gap: 10,
+  },
+  userName: { flexDirection: 'column', justifyContent: 'center' },
   userNameText: { color: 'black', fontWeight: 'bold', fontSize: 17 },
   promptsContainer: {
     position: 'absolute',
