@@ -74,7 +74,7 @@ async function handleResponseDeal(socket, io, data, callback = () => {}) {
             });
         }
         if (status === "accepted") {
-            const post = await Sellpost.findByIdAndUpdate(deal.postId, { status: "sold" }, { new: true });
+            const post = await Sellpost.findByIdAndUpdate(deal.postId, { Status: "sold" }, { new: true });
             if (!post) return callback({ error: "Failed to update the post status" });
         }
         return callback({ success: true, deal });
