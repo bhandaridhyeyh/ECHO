@@ -12,7 +12,7 @@ import {
   Share,
   Alert,
 } from 'react-native';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useWindowDimensions } from 'react-native';
 import { getCurrentUserId, getAccessToken } from '../utilities/keychainUtils';
@@ -27,7 +27,33 @@ const ProductInfo = () => {
   const route = useRoute();
   const { product } = route.params; // Extract product from route parameters
   const { width: screenWidth } = useWindowDimensions();
+  const [seller, setSeller] = useState(
+  typeof product?.seller === 'object' ? product?.seller : null
+  ); 
 
+  useEffect(() => {
+  const fetchSellerDetails = async () => {
+    if (typeof product?.seller === 'string') {
+      try {
+        const token = await getAccessToken();
+        const response = await axios.get(`${API_URL}/user/profile/${product.seller}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.data?.data) { 
+          console.log(response.data.data)
+          setSeller(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching seller details:', error);
+      }
+    }
+  };
+
+  fetchSellerDetails();
+  }, [product?.seller]); 
+  
   const handleChatPress = async () => {
     try {
       const token = await getAccessToken();
@@ -37,7 +63,7 @@ const ProductInfo = () => {
         return;
       }
       const participant_id1 = await getCurrentUserId();
-      const participant_id2 = product.seller._id;
+      const participant_id2 = seller?._id;
 
       if (participant_id1 === participant_id2) {
         Alert.alert("Notice", "You cannot chat with yourself.");
@@ -57,9 +83,9 @@ const ProductInfo = () => {
       navigation.navigate('Conversation', {
         chatId: response.data.data._id,
         receiverId: participant_id2,
-        receiverName: product.seller.fullName,
-        receiverDetails: `${product.seller.course} - ${product.seller.program}`,
-        receiverImage: typeof product.seller?.ProfilePicture === 'string' ? product.seller.ProfilePicture : null,
+        receiverName: seller?.fullName,
+        receiverDetails: `${seller?.course} - ${seller?.program}`,
+        receiverImage: typeof seller?.ProfilePicture === 'string' ? seller.ProfilePicture : null,
       });
     } catch (error) {
       console.error('Error creating chat:', error);
@@ -91,8 +117,8 @@ const ProductInfo = () => {
 
   const makeCall = async () => {
     const participant_id1 = await getCurrentUserId(); // current user
-    const participant_id2 = product?.seller?._id;     // seller
-    const phoneNumber = product?.seller?.contactNumber;
+    const participant_id2 = seller?._id;     // seller
+    const phoneNumber = seller?.contactNumber;
 
     if (participant_id1 === participant_id2) {
       Alert.alert("Notice", "You cannot call your own number.");
@@ -133,10 +159,10 @@ const ProductInfo = () => {
 
   const handleSellerPress = async () => {
     const currentUserId = await getCurrentUserId();
-    if (product?.seller?._id === currentUserId) {
+    if (seller?._id === currentUserId) {
       navigation.navigate('Profile');
     } else {
-      navigation.navigate('OtherUser', { userId: product?.seller?._id });
+      navigation.navigate('OtherUser', { userId: seller?._id });
     }
   };
 
@@ -293,15 +319,15 @@ const ProductInfo = () => {
               <Image
                 style={{ width: 40, height: 40, borderRadius: 20 }}
                 source={
-                  product?.seller?.ProfilePicture
-                    ? { uri: product.seller.ProfilePicture }
+                  seller?.ProfilePicture
+                    ? { uri: seller.ProfilePicture }
                     : require('../assets/images/user.png')
                 }
               />
               <Text style={styles.postedByText}>
-                <Text style={{ fontWeight: 'bold' }}>{product?.seller?.fullName}</Text>
+                <Text style={{ fontWeight: 'bold' }}>{seller?.fullName}</Text>
                 {'\n'}
-                {product?.seller?.course} - {product?.seller?.program}
+                {seller?.course} - {seller?.program}
               </Text>
             </View>
           </Pressable>

@@ -27,7 +27,67 @@ const GetallThread = asyncHandler(async (req , res) => {
     }  
     return res.status(200) 
     .json(new ApiResponse(200,threads,"All Echoes returned !"))
-})   
-const UpdateThread = asyncHandler(async (req, res) => { })
-const DeleteThread = asyncHandler(async (req, res) => {})
+})    
+
+const UpdateThread = asyncHandler(async (req, res) => {
+  const { threadId } = req.params;
+  const { content, markedasFlag } = req.body;
+  const userId = req.user?.id;
+
+  if (!threadId || !userId) {
+    throw new apiError(400, "Thread ID or User ID missing!");
+  }
+
+  const thread = await Thread.findById(threadId);
+
+  if (!thread) {
+    throw new apiError(404, "Thread not found!");
+  }
+
+  // Only the thread creator can update it
+  if (thread.user.toString() !== userId.toString()) {
+    throw new apiError(403, "You are not authorized to update this thread!");
+  }
+
+  // Validate content if present
+  if (content && content.length > 280) {
+    throw new apiError(400, "Content exceeds 280 characters limit!");
+  }
+
+  // Update only if fields are provided
+  if (typeof content === "string") thread.content = content;
+  if (typeof markedasFlag === "boolean") thread.markedasFlag = markedasFlag;
+
+  await thread.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, thread, "Thread updated successfully!"));
+});
+
+const DeleteThread = asyncHandler(async (req, res) => {
+    const { threadId } = req.params;
+    const userId = req.user?.id;
+
+    if (!threadId || !userId) {
+        throw new apiError(400, "Thread ID or User ID missing!");
+    }
+
+    const thread = await Thread.findById(threadId);
+
+    if (!thread) {
+        throw new apiError(404, "Thread not found!");
+    }
+
+    // Ensure only the owner can delete
+    if (thread.user.toString() !== userId.toString()) {
+        throw new apiError(403, "You are not authorized to delete this thread!");
+    }
+
+    await thread.deleteOne();
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, null, "Thread deleted successfully!"));
+});
 export { CreatThread, GetallThread,UpdateThread,DeleteThread } 
