@@ -249,8 +249,14 @@ const logoutUser = asyncHandler(async (req, res) => {
 const GetUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user?._id)
     .select("-password -refreshToken")
-    .populate('sellPosts');  
-  
+    .populate({
+      path: 'sellPosts',
+      populate: {
+        path: 'seller',
+        select: 'fullName contactNumber course program ProfilePicture'
+      }
+    });
+
   if (!user) {
     throw new apiError(404, "User not Found !")
   }
@@ -314,9 +320,8 @@ const GetUserProfileById = async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId).select('-password -refreshToken').populate('sellPosts');
-    console.log(user)
     if (!user) return res.status(404).json({ message: 'User not found' });
-    return res.status(200).json(new ApiResponse(200,user,"sent the user deails !"));
+    return res.status(200).json(new ApiResponse(200,user,"sent the user details !"));
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -337,8 +342,6 @@ const getProductsByUserId = async (req, res) => {
         { seller: userId }, // fallback if seller is stored as string
       ],
     });
-
-    console.log('Found products:', products);
 
     return res.status(200).json(products); // always return array
   } catch (error) {

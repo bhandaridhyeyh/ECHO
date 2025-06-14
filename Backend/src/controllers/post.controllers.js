@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Sellpost } from "../models/sellpost.models.js";
 import { User } from "../models/users.models.js";
-import { UploadOnCloud } from "../utils/cloudinary.js";
+import { UploadOnCloud, DeleteOnCloud } from "../utils/cloudinary.js";
 import { apiError } from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 
@@ -73,25 +73,47 @@ const CreatePost = asyncHandler(async (req, res) => {
 });
 
 const UpdatePost = asyncHandler(async (req, res) => {
-  const postId = req.params
-  const { title, description, price, quantity } = req.body
-  const updatedPost = await Sellpost.User.findByIdAndUpdate(postId, {
-    $set: {
-      title: title,
-      description: description,
-      price: price,
-      quantity: quantity
-    }
-  },
-    { new: true })
-  if (!updatedPost) {
-    throw new apiError(500, "Failed to Update the Post !")
+  const postId = req.params.id;
+  const { title, description, price, quantity, category } = req.body;
+
+  // Find the post
+  const post = await Sellpost.findById(postId);
+  if (!post) {
+    throw new apiError(404, "Post not found!");
   }
-  return res.status(200).json(new ApiResponse(200, updatedPost, "successfully updated post!"))
+
+  // Update text fields
+  if (title) post.title = title;
+  if (description) post.description = description;
+  if (price) post.price = price;
+  if (quantity) post.quantity = quantity;
+  if (category) post.category = category;
+
+  // Handle new image upload
+  if (req.file) {
+    // Upload to Cloudinary
+    const cloudUpload = await UploadOnCloud(req.file.path);
+    if (!cloudUpload) {
+      throw new apiError(500, "Cloudinary image upload failed");
+    }
+
+    // Optional: delete old image from Cloudinary if needed
+    // if (post.image) await DeleteOnCloud(post.image);
+
+    // Update image URL
+    post.image = cloudUpload.secure_url;
+  }
+
+  // Save updated post
+  await post.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, post, "Successfully updated post!"));
 });
 
 const DeletePost = asyncHandler(async (req, res) => {
-  const postId = req.params
+  const postId = req.params.id
   if (!postId) {
     throw new apiError(404, "postId not found!")
   }

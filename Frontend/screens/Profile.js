@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
@@ -14,15 +14,21 @@ import {
     Modal,
     Platform,
     FlatList,
+    Share,
+    TextInput,
+    KeyboardAvoidingView,
+    RefreshControl
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { API_URL } from '@env'
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { getAccessToken, deleteAccessToken } from '../utilities/keychainUtils';
 import socket from '../utilities/socket.js';
+
 const dummyProfileData = {
     name: 'Rohan Sharma',
     email: 'aryan.patel@navuni.edu.in',
@@ -39,11 +45,278 @@ const Profile = () => {
     const [userProducts, setUserProducts] = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
     const [isImageModalVisible, setImageModalVisible] = useState(false);
+    const [echoes, setEchoes] = useState([]);
+    const [selectedEchoId, setSelectedEchoId] = useState(null);
+    const [editingEchoId, setEditingEchoId] = useState(null);
+    const [editedContent, setEditedContent] = useState('');
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+
+        try {
+            await fetchProfileData();     // your existing function
+            await fetchUserProducts();    // your existing function
+            await fetchUserEchoes();      // your existing function
+        } catch (error) {
+            console.error('Refresh error:', error.message);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+    const openOptionsModal = useCallback((id) => {
+        setSelectedEchoId((prev) => (prev === id ? null : id));
+    }, []);
+
+    const handleEdit = useCallback((echo) => {
+        setSelectedEchoId(null);
+        setEditingEchoId(echo._id);
+        setEditedContent(echo.content);
+    }, []);
+
+    const handleUpdate = useCallback(async (id, content) => {
+        try {
+            const token = await getAccessToken();
+
+            await axios.put(
+                `${API_URL}/echoes/${id}`,
+                { content },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            setEchoes((prev) =>
+                prev.map((echo) => (echo._id === id ? { ...echo, content } : echo))
+            );
+
+            setEditingEchoId(null);
+            setEditedContent('');
+        } catch (err) {
+            console.error('Failed to update echo:', err.message);
+            Alert.alert('Error', 'Could not update echo.');
+        }
+    }, []);
+
+    const handleDelete = (id) => {
+        setSelectedEchoId(null);
+
+        Alert.alert('Confirm Delete', 'Are you sure you want to delete this echo?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        const token = await getAccessToken();
+                        await axios.delete(`${API_URL}/echoes/${id}`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        setEchoes((prev) => prev.filter((e) => e._id !== id));
+                        if (editingEchoId === id) {
+                            setEditingEchoId(null);
+                            setEditedContent('');
+                        }
+                    } catch (err) {
+                        console.error('Failed to delete echo:', err.message);
+                        Alert.alert('Error', 'Could not delete echo.');
+                    }
+                },
+            },
+        ]);
+    };
+
+    const handleShare = async (userId, content) => {
+        setSelectedEchoId(null);
+        try {
+            const result = await Share.share({
+                message: `Check out this Echo by me:\n\n"${content}"`,
+            });
+
+            if (result.action === Share.sharedAction) {
+                if (result.activityType) {
+                    console.log('Shared with activity type:', result.activityType);
+                } else {
+                    console.log('Shared successfully');
+                }
+            } else if (result.action === Share.dismissedAction) {
+                console.log('Share dismissed');
+            }
+        } catch (error) {
+            console.error('Error sharing the echo:', error.message);
+        }
+    };
+
+    const fetchUserEchoes = async () => {
+        try {
+            const token = await getAccessToken();
+            const userId = await AsyncStorage.getItem('tradeMateUserId');
+
+            if (!userId) {
+                console.warn('User ID is null. Please ensure it is saved after login.');
+                return;
+            }
+
+            const res = await axios.get(`${API_URL}/echoes/user/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            setEchoes(res.data.data);
+        } catch (err) {
+            console.log('Failed to fetch user echoes:', err.response?.data?.message || err.message);
+        }
+    };
+
+    useEffect(() => {
+        fetchUserEchoes();
+    }, []);
 
     useEffect(() => {
         fetchProfileData();
         fetchUserProducts();
     }, []);
+
+    const [index, setIndex] = useState(0);
+    const [routes] = useState([
+        { key: 'products', title: 'Products' },
+        { key: 'echoes', title: 'Echoes' },
+    ]);
+
+    const ProductsTab = () => (
+        <View style={styles.tabContent}>
+            {productsLoading ? (
+                <ActivityIndicator size="small" color="#E53935" />
+            ) : userProducts.length > 0 ? (
+                <FlatList
+                    data={[...userProducts].reverse()}
+                    renderItem={renderProductItem}
+                    keyExtractor={(item) => item._id}
+                    numColumns={3}
+                    columnWrapperStyle={styles.productList}
+                    scrollEnabled={false}
+                />
+            ) : (
+                <View style={styles.emptyStateContainer}>
+                    <Icon name="cube-outline" size={50} color="#cccccc" alignSelf="center" />
+                    <Text style={styles.emptyStateText}>No products listed yet</Text>
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => navigation.navigate('Sell')}
+                    >
+                        <Text style={styles.addButtonText}>Add Product</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+        </View>
+    );
+
+    // Echoes Tab Component
+    const EchoesTab = () => {
+        return (
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={80}
+            >
+                <ScrollView contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
+                    {echoes.length > 0 ? (
+                        echoes.slice().reverse().map((echo) => (
+                            <View key={echo._id} style={styles.echoCard}>
+                                {/* User Info */}
+                                <View style={styles.userInfoContainer}>
+                                    <TouchableOpacity onPress={() => {/* your handleUserPress */ }} style={styles.userInfoLeft}>
+                                        <Image
+                                            source={
+                                                echo?.user?.ProfilePicture
+                                                    ? { uri: echo.user.ProfilePicture }
+                                                    : require('../assets/images/user.png')
+                                            }
+                                            style={styles.userImage}
+                                        />
+                                        <View style={styles.userInfo}>
+                                            <Text style={styles.userName}>{echo.user?.fullName}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity onPress={() => openOptionsModal(echo._id)} style={styles.ellipsisButton}>
+                                        <Icon name="ellipsis-vertical" size={20} color="#555" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Content or Editing Input */}
+                                {editingEchoId === echo._id ? (
+                                    <View>
+                                        <TextInput
+                                            style={styles.editInput}
+                                            value={editedContent}
+                                            onChangeText={setEditedContent}
+                                            placeholder="Edit your echo"
+                                            multiline
+                                            placeholderTextColor="#888"
+                                            autoFocus
+                                        />
+                                        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8, gap: 15 }}>
+                                            <TouchableOpacity
+                                                onPress={() => handleUpdate(echo._id, editedContent)}
+                                                style={styles.updateEcho}
+                                            >
+                                                <Text style={styles.updateButtonText}>Update</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    setEditingEchoId(null);
+                                                    setEditedContent('');
+                                                }}
+                                                style={[styles.updateEcho, { backgroundColor: '#aaa' }]} // slightly different style for cancel
+                                            >
+                                                <Text style={[styles.updateButtonText, { color: '#333' }]}>Cancel</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.echoContent}>{echo.content}</Text>
+                                )}
+
+                                {/* Options Modal */}
+                                {selectedEchoId === echo._id && editingEchoId !== echo._id && (
+                                    <View style={styles.optionsModal}>
+                                        <TouchableOpacity onPress={() => handleEdit(echo)} style={styles.optionItem}>
+                                            <Text style={styles.optionText}>Edit</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => handleShare(echo.user._id, echo.content)} style={styles.optionItem}>
+                                            <Text style={styles.optionText}>Share</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => handleDelete(echo._id)} style={styles.optionItem}>
+                                            <Text style={[styles.optionText, { color: 'red' }]}>Delete</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </View>
+                        ))
+                    ) : (
+                        <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No Echoes to display</Text>
+                    )}
+                </ScrollView>
+            </KeyboardAvoidingView>
+        );
+    };
+
+    const renderScene = SceneMap({
+        products: ProductsTab,
+        echoes: EchoesTab,
+    });
+
+    const renderTabBar = (props) => (
+        <TabBar
+            {...props}
+            indicatorStyle={styles.tabIndicator}
+            style={styles.tabBar}
+            labelStyle={styles.tabLabel}
+            activeColor="#350f55"
+            inactiveColor="#888"
+            pressColor="#f0f0f0"
+        />
+    );
 
     const handleProfileImagePress = () => {
         if (profileData.ProfilePicture) {
@@ -280,7 +553,7 @@ const Profile = () => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Profile</Text>
                 <TouchableOpacity onPress={handleOptionsPress} style={styles.headerButton}>
-                    <Icon name="ellipsis-horizontal" size={28} color="#FFFFFF" />
+                    <Icon name="ellipsis-vertical" size={28} color="#FFFFFF" />
                 </TouchableOpacity>
             </View>
 
@@ -288,7 +561,10 @@ const Profile = () => {
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContentContainer}
                 showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled">
+                keyboardShouldPersistTaps="handled"
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }>
 
                 {/* Profile Image */}
                 <View style={styles.profileHeaderArea}>
@@ -363,31 +639,15 @@ const Profile = () => {
                 </View>
 
                 {/* User's Products Section */}
-                <View style={styles.productsSection}>
-                    <Text style={styles.sectionTitle}>Listed Products</Text>
-
-                    {productsLoading ? (
-                        <ActivityIndicator size="small" color="#E53935" />
-                    ) : userProducts.length > 0 ? (
-                        <FlatList
-                            data={userProducts}
-                            renderItem={renderProductItem}
-                            keyExtractor={(item) => item._id}
-                            numColumns={3}  // Changed from 2 to 3
-                            columnWrapperStyle={styles.productList}
-                            scrollEnabled={false}
-                        />
-                    ) : (
-                        <View style={styles.emptyStateContainer}>
-                            <Icon name="cube-outline" size={50} color="#cccccc" alignSelf="center" />
-                            <Text style={styles.emptyStateText}>No products listed yet</Text>
-                            <TouchableOpacity
-                                style={styles.addButton}
-                                onPress={() => navigation.navigate('Sell')}
-                            >
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                <View style={styles.tabContainer}>
+                    <TabView
+                        navigationState={{ index, routes }}
+                        renderScene={renderScene}
+                        onIndexChange={setIndex}
+                        initialLayout={{ width: Dimensions.get('window').width }}
+                        renderTabBar={renderTabBar}
+                        swipeEnabled={true}
+                    />
                 </View>
             </ScrollView>
             <Modal
@@ -641,6 +901,124 @@ const styles = StyleSheet.create({
         right: 10,
         // zIndex to ensure above image
         zIndex: 10,
+    },
+    tabContainer: {
+        flex: 1,
+        maxHeight: 1360, // Adjust as needed
+        marginTop: 20,
+    },
+    tabContent: {
+        flex: 1,
+        padding: 10,
+    },
+    tabBar: {
+        backgroundColor: '#fff',
+        elevation: 0,
+        shadowOpacity: 0,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    tabLabel: {
+        fontWeight: 'bold',
+        textTransform: 'capitalize',
+    },
+    tabIndicator: {
+        backgroundColor: '#350f55',
+        height: 3,
+    },
+    echoMeta: {
+        fontSize: 12,
+        color: '#777',
+        marginTop: 4,
+    },
+    userInfoContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    userInfoLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    userImage: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        marginRight: 8,
+    },
+    userInfo: {
+        justifyContent: 'center',
+    },
+    userName: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+    },
+    ellipsisButton: {
+        padding: 5,
+    },
+    echoCard: {
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 10,
+        marginTop: 15,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 3 },
+        zIndex: 0,
+        borderWidth: 0.5,
+        borderColor: '#DADADA',
+        position: 'relative',
+    },
+    echoContent: {
+        fontSize: 15,
+        color: '#444',
+        marginTop: 4,
+    },
+    optionsModal: {
+        backgroundColor: '#fff',
+        position: 'absolute',
+        top: 5, // below userInfoContainer
+        right: 40,
+        width: 120,
+        paddingVertical: 4,
+        borderRadius: 6,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        zIndex: 999,
+    },
+    optionItem: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+    },
+    optionText: {
+        fontSize: 14,
+        color: '#333',
+    },
+    editInput: {
+        borderColor: '#ccc',
+        borderWidth: 1,
+        padding: 10,
+        borderRadius: 8,
+        marginVertical: 8,
+        color: '#000',
+        backgroundColor: '#f9f9f9',
+    },
+    updateEcho: {
+        backgroundColor: '#5D4F00',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+    },
+    updateButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
     },
 });
 

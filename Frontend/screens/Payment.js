@@ -55,7 +55,7 @@ const Payment = () => {
               const data = { sellerId: product.seller._id, buyerId: bid, postId: product._id };
 
               if (!socket || !socket.connected) {
-                Alert.alert('Error', 'Socket not connected');
+                Alert.alert('Error', 'Seller is not online');
                 return;
               }
 

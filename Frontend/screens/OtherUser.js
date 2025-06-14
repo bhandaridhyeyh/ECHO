@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
     StyleSheet, Text, View, SafeAreaView, Image, TouchableOpacity,
-    ScrollView, Alert, ActivityIndicator, FlatList, Dimensions, Modal
+    ScrollView, Alert, ActivityIndicator, FlatList, Dimensions, Modal, useWindowDimensions, Share
 } from 'react-native';
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { API_URL } from '@env';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { getAccessToken, getCurrentUserId } from '../utilities/keychainUtils';
 
 const OtherUser = () => {
     const navigation = useNavigation();
@@ -18,6 +20,199 @@ const OtherUser = () => {
     const [userProducts, setUserProducts] = useState([]);
     const [productsLoading, setProductsLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
+    const [userEchoes, setUserEchoes] = useState([]);
+    const [index, setIndex] = useState(0);
+    const layout = useWindowDimensions();
+    const [routes] = useState([
+        { key: 'products', title: 'Products' },
+        { key: 'echoes', title: 'Echoes' },
+    ]);
+
+    // Fetch echoes
+    useEffect(() => {
+        if (userId) {
+            fetchOtherUserProfile();
+            fetchOtherUserEchoes();
+        }
+    }, [userId]);
+
+    const fetchOtherUserEchoes = async () => {
+        try {
+            const token = await getAccessToken();
+            const response = await axios.get(`${API_URL}/echoes/user/${userId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            // Log to verify structure
+            console.log("Echo API response", response.data);
+
+            setUserEchoes(response.data?.data || []); // Only set the array part
+        } catch (error) {
+            console.error('Error fetching user echoes:', error);
+        }
+    };
+
+    // Tab rendering logic
+
+    const renderProductItem = ({ item }) => {
+        console.log("Rendering product item:", item); // 🔍 Log here
+
+        return (
+            <TouchableOpacity
+                style={styles.productCard}
+                onPress={() => {
+                    console.log("Navigating to ProductInfo with:", item); // 🔍 Log on press
+                    navigation.navigate('ProductInfo', { product: item });
+                }}
+            >
+                <Image
+                    source={item.image ? { uri: item.image } : require('../assets/images/university.png')}
+                    style={styles.productImage}
+                />
+                <View style={styles.productDetails}>
+                    <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.productPrice}>₹{item.price}</Text>
+                    <Text
+                        style={[
+                            styles.productStatus,
+                            item.Status?.toLowerCase() === 'sold' ? styles.soldStatus : styles.availableStatus
+                        ]}
+                    >
+                        {(item.Status || 'Available').toUpperCase()}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const renderProductTab = () => (
+        userProducts.length > 0 ? (
+            <View style={{ flexGrow: 1 }}>
+                <FlatList
+                    data={[...userProducts].reverse()}
+                    renderItem={renderProductItem}
+                    keyExtractor={(item) => item._id}
+                    numColumns={3}
+                    columnWrapperStyle={styles.productList}
+                    scrollEnabled={false}
+                />
+            </View>
+        ) : (
+            <Text style={styles.emptyStateText}>No products listed yet</Text>
+        )
+    );
+
+    const handleChat = async (echo) => {
+        try {
+            const token = await getAccessToken();
+            if (!token) {
+                Alert.alert('Authentication Required', 'Please log in to post an item.');
+                navigation.navigate('Login');
+                return;
+            }
+            const participant_id1 = await getCurrentUserId();
+            const participant_id2 = echo.user._id;
+
+            if (participant_id1 === participant_id2) {
+                Alert.alert("Notice", "You cannot chat with yourself.");
+                return;
+            }
+
+            const response = await axios.post(`${API_URL}/Chat/create`, {
+                participant_id1,
+                participant_id2,
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            console.log('Chat created:', response.data.data);
+            navigation.navigate('Conversation', {
+                chatId: response.data.data._id,
+                receiverId: participant_id2,
+                receiverName: echo.user.fullName,
+                receiverDetails: `${echo.user.course} - ${echo.user.program}`,
+                receiverImage: typeof echo.user?.ProfilePicture === 'string' ? echo.user.ProfilePicture : null,
+            });
+        } catch (error) {
+            console.error('Error creating chat:', error);
+        }
+    };
+    const handleShare = (content) => {
+        // Use Share API or custom logic
+        Share.share({ message: `Checkout this echo: ${content}` });
+    };
+
+    const renderEchoItem = ({ item }) => (
+        <View style={styles.echoCard}>
+            {/* User Info Row */}
+            <View style={styles.userInfoContainer}>
+                <Image
+                    source={
+                        item.user.ProfilePicture
+                            ? { uri: item.user.ProfilePicture }
+                            : require('../assets/images/user.png')
+                    }
+                    style={styles.userImage}
+                />
+                <Text style={styles.echoTitle}>{item.user.fullName || "No Name"}</Text>
+            </View>
+
+            {/* Echo Content */}
+            <Text style={styles.echoDescription}>
+                {item.content || item.description || "No content available"}
+            </Text>
+
+            {/* Action Icons */}
+            <View style={styles.echoActions}>
+                <TouchableOpacity onPress={() => handleChat(item)}>
+                    <Icon name="chatbubble-ellipses-outline" size={24} color="#350f55" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleShare(item.user._id, item.content)}>
+                    <Icon name="share-social-outline" size={24} color="#350f55" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    const renderEchoTab = () => (
+        userEchoes.length > 0 ? (
+            <FlatList
+                data={[...userEchoes].reverse()}
+                renderItem={renderEchoItem}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                scrollEnabled={false}
+            />
+        ) : (
+            <Text style={styles.emptyStateText}>No echoes posted yet</Text>
+        )
+    );
+
+    const renderScene = ({ route }) => {
+        switch (route.key) {
+            case 'products':
+                return (
+                    <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+                        {renderProductTab()}
+                    </ScrollView>
+                );
+            case 'echoes':
+                return (
+                    <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+                        {renderEchoTab()}
+                    </ScrollView>
+                );
+            default:
+                return null;
+        }
+    };
+
+    useEffect(() => {
+        console.log("userEchoes", userEchoes);
+    }, [userProducts, userEchoes]);
 
     useEffect(() => {
         if (userId) {
@@ -31,9 +226,8 @@ const OtherUser = () => {
             const response = await axios.get(`${API_URL}/user/profile/${userId}`, {
                 timeout: 10000,
             });
-            const user = response.data?.data || response.data;  
-            const products = user?.sellPosts || user?.userSellpost || []; 
-            console.log(products)
+            const user = response.data?.data || response.data;
+            const products = user?.sellPosts || user?.userSellpost || [];
             setUserProducts(products);
             setProfileData(user);
         } catch (error) {
@@ -45,28 +239,6 @@ const OtherUser = () => {
     };
 
     const handleBackPress = () => navigation.goBack();
-
-    const renderProductItem = ({ item }) => (
-        <TouchableOpacity
-            style={styles.productCard}
-            onPress={() => navigation.navigate('ProductInfo', { product: item })}
-        >
-            <Image
-                source={item.image ? { uri: item.image } : require('../assets/images/university.png')}
-                style={styles.productImage}
-            />
-            <View style={styles.productDetails}>
-                <Text style={styles.productTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.productPrice}>₹{item.price}</Text>
-                <Text style={[
-                    styles.productStatus,
-                    item.Status?.toLowerCase() === 'sold' ? styles.soldStatus : styles.availableStatus
-                ]}>
-                    {item.Status.toUpperCase() || 'Available'}
-                </Text>
-            </View>
-        </TouchableOpacity>
-    );
 
     if (isLoading || !profileData) {
         return (
@@ -194,31 +366,23 @@ const OtherUser = () => {
                 </TouchableOpacity>
 
                 {/* User's Products Section */}
-                <View style={styles.productsSection}>
-                    <Text style={styles.sectionTitle}>Listed Products</Text>
-
-                    {productsLoading ? (
-                        <ActivityIndicator size="small" color="#E53935" />
-                    ) : userProducts.length > 0 ? (
-                        <FlatList
-                            data={userProducts}
-                            renderItem={renderProductItem}
-                            keyExtractor={(item) => item._id}
-                            numColumns={3}  // Changed from 2 to 3
-                            columnWrapperStyle={styles.productList}
-                            scrollEnabled={false}
-                        />
-                    ) : (
-                        <View style={styles.emptyStateContainer}>
-                            <Icon name="cube-outline" size={50} color="#cccccc" alignSelf="center" />
-                            <Text style={styles.emptyStateText}>No products listed yet</Text>
-                            <TouchableOpacity
-                                style={styles.addButton}
-                                onPress={() => navigation.navigate('Sell')}
-                            >
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                <View style={{ height: 1320, width: '100%', marginTop: 20 }}>
+                    <TabView
+                        navigationState={{ index, routes }}
+                        renderScene={renderScene}
+                        onIndexChange={setIndex}
+                        initialLayout={{ width: layout.width }}
+                        renderTabBar={props => (
+                            <TabBar
+                                {...props}
+                                indicatorStyle={{ backgroundColor: '#350f55' }}
+                                style={{ backgroundColor: 'white' }}
+                                activeColor="#350f55"
+                                inactiveColor="#888"
+                                labelStyle={{ fontWeight: '600' }}
+                            />
+                        )}
+                    />
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -279,20 +443,6 @@ const styles = StyleSheet.create({
         borderWidth: PROFILE_IMAGE_BORDER,
         borderColor: '#FFFFFF',
         backgroundColor: '#E0E0E0',
-    },
-    updateButton: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: 'rgba(229, 57, 53, 0.85)',
-        borderRadius: 16,
-        padding: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.3,
-        shadowRadius: 2,
-        elevation: 3,
-        zIndex: 1,
     },
     profileDetailsContainer: {
         width: '90%',
@@ -363,9 +513,9 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     productList: {
-        marginBottom: 15,
-        gap: width * 0.01,
+        marginTop: 15,
         width: '100%',
+        gap: width * 0.02
     },
     productCard: {
         width: '30%',  // Changed from '48%' to '30%' to fit 3 columns
@@ -373,7 +523,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 10,
         padding: 10,
-        marginBottom: 15,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -434,7 +583,60 @@ const styles = StyleSheet.create({
         width: '90%',
         height: '70%',
         borderRadius: 15,
-    }
+    },
+    emptyStateText: {
+        textAlign: 'center',
+        marginTop: 40,
+        fontSize: 16,
+        color: '#888',
+    },
+    emptyStateText: {
+        textAlign: 'center',
+        color: '#888',
+        fontSize: 16,
+        marginVertical: 20,
+    },
+    echoCard: {
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 10,
+        marginTop: 15,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 3 },
+        zIndex: 0,
+        borderWidth: 0.5,
+        borderColor: '#DADADA',
+        position: 'relative',
+    },
+    echoTitle: {
+        fontWeight: 'bold',
+        fontSize: 16,
+        color: '#1a1a1a',
+    },
+    echoDescription: {
+        fontSize: 15,
+        color: '#333',
+        marginTop: 5,
+    },
+    userInfoContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    userImage: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        marginRight: 10,
+    },
+    echoActions: {
+        flexDirection: 'row',
+        gap: 15,
+        marginTop: 12,
+    },
 });
 
 export default OtherUser;

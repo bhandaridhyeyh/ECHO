@@ -1,36 +1,39 @@
-import { asyncHandler } from "../utils/asyncHandler.js"; 
-import ApiResponse from "../utils/apiResponse.js"; 
-import { apiError } from "../utils/apiError.js"; 
+import { asyncHandler } from "../utils/asyncHandler.js";
+import ApiResponse from "../utils/apiResponse.js";
+import { apiError } from "../utils/apiError.js";
 import { Thread } from "../models/echoes.model.js";
+import mongoose from 'mongoose';
 
-const CreatThread = asyncHandler(async (req, res) => {  
-    const { content, markedAsFlagged } = req.body 
-    const user = req.user?.id
-    console.log(content,markedAsFlagged)
-    if (!content ) {  
-        throw new apiError(404,"Important fields not Found !")
-    } 
-    if (!user) {  
-       throw new apiError(404,"user id not found !")
-    }
-    const thread = Thread.create({ content: content, user: user, markedasFlag: markedAsFlagged }) 
-    if (!thread) {  
-        throw new apiError(403,"failed to create the Thread post !")
-    } 
-    return res.status(201) 
-    .json(new ApiResponse(201,thread,"successfully created the thread !"))
-}) 
-const GetallThread = asyncHandler(async (req , res) => { 
-    const threads = await Thread.find().populate('user', 'fullName ProfilePicture course program').sort({ createdAt: -1 });
-    if (!threads) {  
-        throw new apiError(401,"threads not Found !")
-    }  
-    return res.status(200) 
-    .json(new ApiResponse(200,threads,"All Echoes returned !"))
-})    
+const CreatThread = asyncHandler(async (req, res) => {
+  const { content, markedAsFlagged } = req.body
+  const user = req.user?.id
+  console.log(content, markedAsFlagged)
+  if (!content) {
+    throw new apiError(404, "Important fields not Found !")
+  }
+  if (!user) {
+    throw new apiError(404, "user id not found !")
+  }
+  const thread = Thread.create({ content: content, user: user, markedasFlag: markedAsFlagged })
+  if (!thread) {
+    throw new apiError(403, "failed to create the Thread post !")
+  }
+  return res.status(201)
+    .json(new ApiResponse(201, thread, "successfully created the thread !"))
+})
+
+const GetallThread = asyncHandler(async (req, res) => {
+  const threads = await Thread.find().populate('user', 'fullName ProfilePicture course program contactNumber').sort({ createdAt: -1 });
+  if (!threads) {
+    throw new apiError(401, "threads not Found !")
+  }
+  return res.status(200)
+    .json(new ApiResponse(200, threads, "All Echoes returned !"))
+})
 
 const UpdateThread = asyncHandler(async (req, res) => {
-  const { threadId } = req.params;
+  const { id } = req.params;
+  const threadId = id;
   const { content, markedasFlag } = req.body;
   const userId = req.user?.id;
 
@@ -66,28 +69,46 @@ const UpdateThread = asyncHandler(async (req, res) => {
 });
 
 const DeleteThread = asyncHandler(async (req, res) => {
-    const { threadId } = req.params;
-    const userId = req.user?.id;
+  const { id } = req.params;
+  const threadId = id;
+  const userId = req.user?.id;
 
-    if (!threadId || !userId) {
-        throw new apiError(400, "Thread ID or User ID missing!");
-    }
+  if (!threadId || !userId) {
+    throw new apiError(400, "Thread ID or User ID missing!");
+  }
 
-    const thread = await Thread.findById(threadId);
+  const thread = await Thread.findById(threadId);
 
-    if (!thread) {
-        throw new apiError(404, "Thread not found!");
-    }
+  if (!thread) {
+    throw new apiError(404, "Thread not found!");
+  }
 
-    // Ensure only the owner can delete
-    if (thread.user.toString() !== userId.toString()) {
-        throw new apiError(403, "You are not authorized to delete this thread!");
-    }
+  // Ensure only the owner can delete
+  if (thread.user.toString() !== userId.toString()) {
+    throw new apiError(403, "You are not authorized to delete this thread!");
+  }
 
-    await thread.deleteOne();
+  await thread.deleteOne();
 
-    return res
-        .status(200)
-        .json(new ApiResponse(200, null, "Thread deleted successfully!"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Thread deleted successfully!"));
 });
-export { CreatThread, GetallThread,UpdateThread,DeleteThread } 
+
+const GetUserThreads = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  // Validate userId
+  if (!userId || userId === "null" || !mongoose.Types.ObjectId.isValid(userId)) {
+    console.log("Invalid userId:", userId);
+    throw new apiError(400, "Invalid or missing user ID");
+  }
+
+  const userThreads = await Thread.find({ user: userId }).populate('user');
+
+  return res.status(200).json(
+    new ApiResponse(200, userThreads, "User's threads fetched successfully.")
+  );
+});
+
+export { CreatThread, GetallThread, UpdateThread, DeleteThread, GetUserThreads } 

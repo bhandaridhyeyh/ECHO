@@ -28,32 +28,49 @@ const ProductInfo = () => {
   const { product } = route.params; // Extract product from route parameters
   const { width: screenWidth } = useWindowDimensions();
   const [seller, setSeller] = useState(
-  typeof product?.seller === 'object' ? product?.seller : null
-  ); 
+    typeof product?.seller === 'object' ? product?.seller : null
+  );
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
-  const fetchSellerDetails = async () => {
-    if (typeof product?.seller === 'string') {
+    const fetchCurrentUser = async () => {
       try {
-        const token = await getAccessToken();
-        const response = await axios.get(`${API_URL}/user/profile/${product.seller}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (response.data?.data) { 
-          console.log(response.data.data)
-          setSeller(response.data.data);
-        }
+        const userId = await getCurrentUserId(); // this is just an ID string
+        setCurrentUserId(userId);
       } catch (error) {
-        console.error('Error fetching seller details:', error);
+        console.error("Error fetching current user:", error);
       }
-    }
-  };
+    };
 
-  fetchSellerDetails();
-  }, [product?.seller]); 
-  
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    console.log("ProductInfo received product:", product);
+  }, []);
+
+  useEffect(() => {
+    const fetchSellerDetails = async () => {
+      if (typeof product?.seller === 'string') {
+        try {
+          const token = await getAccessToken();
+          const response = await axios.get(`${API_URL}/user/profile/${product.seller}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (response.data?.data) {
+            setSeller(response.data.data);
+          }
+        } catch (error) {
+          console.error('Error fetching seller details:', error);
+        }
+      }
+    };
+
+    fetchSellerDetails();
+  }, [product?.seller]);
+
   const handleChatPress = async () => {
     try {
       const token = await getAccessToken();
@@ -247,24 +264,16 @@ const ProductInfo = () => {
             }}>
             Price: ₹ {String(product?.price)}
           </Text>
-          {product?.Status && (
-            <Text
-              style={{
-                color: 'black',
-                fontSize: 17,
-                marginBottom: 15,
-                color:
-                  product?.Status === 'available'
-                    ? 'green'
-                    : product?.Status === 'sold'
-                      ? 'red'
-                      : 'orange',
-              }}
-            >
-              Status: {String(product?.Status).toUpperCase()}
-            </Text>
+          {product?.Status && (() => {
+            const status = product.Status.toLowerCase();
+            const statusColor = status === 'available' ? 'green' : status === 'sold' ? 'red' : 'orange';
 
-          )}
+            return (
+              <Text style={{ color: statusColor, fontSize: 17, marginBottom: 15 }}>
+                Status: {status.toUpperCase()}
+              </Text>
+            );
+          })()}
           {product?.quantity && (
             <Text style={{ color: 'black', fontSize: 17, marginBottom: 15 }}>
               Quantity: {String(product?.quantity)}
@@ -284,16 +293,18 @@ const ProductInfo = () => {
               {product?.description || '- No description provided -'}
             </Text>
           </View>
-          {product.status !== 'sold' && (
-            <Pressable onPress={() => navigateToPayment(product)}>
-              <View style={styles.btn}>
-                <FontAwesome name="handshake-o" size={30} color="white" />
-                <Text style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>
-                  Close Deal
-                </Text>
-              </View>
-            </Pressable>
-          )}
+          {currentUserId &&
+            currentUserId.toString() !== product?.seller?._id?.toString() &&
+            product?.Status?.toLowerCase() !== 'sold' && (
+              <Pressable onPress={() => navigateToPayment(product)}>
+                <View style={styles.btn}>
+                  <FontAwesome name="handshake-o" size={30} color="white" />
+                  <Text style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>
+                    Close Deal
+                  </Text>
+                </View>
+              </Pressable>
+            )}
         </View>
 
         <View
@@ -335,16 +346,16 @@ const ProductInfo = () => {
           {/* Display the formatted creation date */}
         </View>
       </ScrollView>
-      <View style={styles.footer}>
-        <Pressable
-          style={styles.footerButton}
-          onPress={handleChatPress}>
-          <Text style={styles.footerButtonText}>CHAT</Text>
-        </Pressable>
-        <Pressable style={styles.footerButton} onPress={makeCall}>
-          <Text style={styles.footerButtonText}>CALL</Text>
-        </Pressable>
-      </View>
+      {currentUserId && currentUserId.toString() !== product?.seller?._id?.toString() && (
+        <View style={styles.footer}>
+          <Pressable style={styles.footerButton} onPress={handleChatPress}>
+            <Text style={styles.footerButtonText}>CHAT</Text>
+          </Pressable>
+          <Pressable style={styles.footerButton} onPress={makeCall}>
+            <Text style={styles.footerButtonText}>CALL</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 };

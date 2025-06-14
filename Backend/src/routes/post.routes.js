@@ -5,6 +5,6 @@ import { upload } from "../middlewares/multer.middlewares.js";
 
 const router = Router() 
 router.route('/sell-posts').post(verifyJWT,upload.single('Productpicture'),CreatePost).get(GetallPost); 
-router.route('/sell-post/:id').put(UpdatePost).delete(DeletePost).get(GetSpecificPost);
+router.route('/sell-post/:id').put(verifyJWT, upload.single('Productpicture'), UpdatePost).delete(verifyJWT, DeletePost).get(GetSpecificPost);
 router.route('/sell-posts/search').get(SearchedPost);
-export default router 
+export default router

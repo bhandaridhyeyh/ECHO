@@ -129,19 +129,24 @@ const Home = ({ route }) => {
         );
     };
 
-    const renderItem = ({ item }) => (
-        <View style={styles.card2}>
-            <Pressable onPress={() => navigateToProductInfo(item)}>
-                <Image
-                    style={{ height: 120, width: 120, alignSelf: 'center' }}
-                    source={{ uri: item.image }} // Use item.image
-                />
-                <Text style={{ color: 'black', fontSize: 17 }}>{item.title}</Text>
-                <Text style={{ color: 'black', fontSize: 17 }}>₹ {item.price}</Text>
-                {/* <Text style={{ color: 'black', fontSize: 15 }}>₹{item.price.toString}</Text> */}
-            </Pressable>
-        </View>
-    );
+    const renderItem = ({ item }) => {
+        // Skip rendering if status is 'sold'
+        if ((item.status || item.Status)?.toLowerCase() === 'sold') {
+            return null;
+        }
+        return (
+            <View style={styles.card2}>
+                <Pressable onPress={() => navigateToProductInfo(item)}>
+                    <Image
+                        style={{ height: 120, width: 120, alignSelf: 'center' }}
+                        source={{ uri: item.image }}
+                    />
+                    <Text style={{ color: 'black', fontSize: 17 }}>{item.title}</Text>
+                    <Text style={{ color: 'black', fontSize: 17 }}>₹ {item.price}</Text>
+                </Pressable>
+            </View>
+        );
+    };
 
     const navigateToProductInfo = (product) => {
         navigation.navigate('ProductInfo', { product });
