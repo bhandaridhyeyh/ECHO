@@ -19,7 +19,7 @@ const { width } = Dimensions.get('window');
 const Payment = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { product } = route.params;
+  const { product,seller } = route.params;
 
   const dealId = `${product?._id?.slice(-8) || '84816554'}`;
   const productImageSource = product?.image
@@ -52,7 +52,7 @@ const Payment = () => {
                 return;
               }
 
-              const data = { sellerId: product.seller._id, buyerId: bid, postId: product._id };
+              const data = { sellerId: seller._id, buyerId: bid, postId: product._id };
 
               if (!socket || !socket.connected) {
                 Alert.alert('Error', 'Seller is not online');
@@ -159,7 +159,7 @@ const Payment = () => {
           Deal ID: #{dealId}{'\n'}
         </Text>
         <Text style={{ color: 'black', fontSize: width * 0.045, fontWeight: 'bold' }}>
-          Seller: {product?.seller?.fullName || 'Unknown Seller'}
+          Seller: {seller?.fullName || 'Unknown Seller'}
         </Text>
         <Text style={{ color: 'black', fontSize: width * 0.045, fontWeight: 'bold' }}>
           Total Amount: ₹ {product?.price || '0'}

@@ -25,7 +25,7 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 const ProductInfo = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { product } = route.params; // Extract product from route parameters
+  const { product} = route.params; // Extract product from route parameters
   const { width: screenWidth } = useWindowDimensions();
   const [seller, setSeller] = useState(
     typeof product?.seller === 'object' ? product?.seller : null
@@ -129,7 +129,7 @@ const ProductInfo = () => {
   const formattedDate = createdAtDate.toLocaleDateString('en-IN', options); // Using 'en-IN' locale for India
 
   const navigateToPayment = product => {
-    navigation.navigate('Payment', { product });
+    navigation.navigate('Payment', { product ,seller });
   };
 
   const makeCall = async () => {
