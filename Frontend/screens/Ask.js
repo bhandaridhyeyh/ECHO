@@ -35,7 +35,7 @@ const Ask = () => {
     if (isFlagged) {
       Alert.alert(
         "Flagged!",
-        "Flags the post as urgent and important, making it visible at the top for others to notice."
+        "Flags the post as urgent and important, making it visible at the top on your profile to notice."
       );
     }
   }, [isFlagged]);

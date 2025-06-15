@@ -157,7 +157,19 @@ const OtherUser = () => {
                     }
                     style={styles.userImage}
                 />
-                <Text style={styles.echoTitle}>{item.user.fullName || "No Name"}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.echoTitle}>{item.user.fullName || "No Name"}</Text>
+
+                    {/* Show dot and FLAGGED badge if markedasFlag is true */}
+                    {item.markedasFlag && (
+                        <>
+                            <Icon name="ellipse" size={6} color="#000" />
+                            <View style={styles.flagBox}>
+                                <Text style={styles.flagText}>FLAGGED</Text>
+                            </View>
+                        </>
+                    )}
+                </View>
             </View>
 
             {/* Echo Content */}
@@ -177,10 +189,16 @@ const OtherUser = () => {
         </View>
     );
 
-    const renderEchoTab = () => (
-        userEchoes.length > 0 ? (
+    const renderEchoTab = () => {
+        // ✅ Correct sorting by markedasFlag
+        const sortedEchoes = [...userEchoes].sort((a, b) => {
+            if (a.markedasFlag === b.markedasFlag) return 0;
+            return a.markedasFlag ? -1 : 1;
+        });
+
+        return sortedEchoes.length > 0 ? (
             <FlatList
-                data={[...userEchoes].reverse()}
+                data={sortedEchoes}
                 renderItem={renderEchoItem}
                 keyExtractor={(item) => item._id}
                 contentContainerStyle={{ paddingBottom: 20 }}
@@ -188,8 +206,8 @@ const OtherUser = () => {
             />
         ) : (
             <Text style={styles.emptyStateText}>No echoes posted yet</Text>
-        )
-    );
+        );
+    };
 
     const renderScene = ({ route }) => {
         switch (route.key) {
@@ -636,6 +654,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 15,
         marginTop: 12,
+    },
+    flagBox: {
+        backgroundColor: 'red',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 4,
+    },
+
+    flagText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
 });
 

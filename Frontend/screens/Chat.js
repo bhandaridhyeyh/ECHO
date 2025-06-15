@@ -114,6 +114,7 @@ const BuyingChats = () => {
               <React.Fragment key={chat._id || idx}>
                 <Pressable
                   onPress={() =>
+                    console.log(otherUser) ||
                     navigation.navigate('Conversation', {
                       chatId: chat._id,
                       chat,

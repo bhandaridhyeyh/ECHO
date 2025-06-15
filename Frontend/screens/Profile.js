@@ -211,6 +211,12 @@ const Profile = () => {
 
     // Echoes Tab Component
     const EchoesTab = () => {
+        // Sort echoes: flagged first
+        const sortedEchoes = [...echoes].sort((a, b) => {
+            if (a.markedasFlag === b.markedasFlag) return 0;
+            return a.markedasFlag ? -1 : 1;
+        });
+
         return (
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -218,12 +224,12 @@ const Profile = () => {
                 keyboardVerticalOffset={80}
             >
                 <ScrollView contentContainerStyle={{ paddingBottom: 80 }} keyboardShouldPersistTaps="handled">
-                    {echoes.length > 0 ? (
-                        echoes.slice().reverse().map((echo) => (
+                    {sortedEchoes.length > 0 ? (
+                        sortedEchoes.map((echo) => (
                             <View key={echo._id} style={styles.echoCard}>
                                 {/* User Info */}
                                 <View style={styles.userInfoContainer}>
-                                    <TouchableOpacity onPress={() => {/* your handleUserPress */ }} style={styles.userInfoLeft}>
+                                    <TouchableOpacity onPress={() => { /* your handleUserPress */ }} style={styles.userInfoLeft}>
                                         <Image
                                             source={
                                                 echo?.user?.ProfilePicture
@@ -233,7 +239,18 @@ const Profile = () => {
                                             style={styles.userImage}
                                         />
                                         <View style={styles.userInfo}>
-                                            <Text style={styles.userName}>{echo.user?.fullName}</Text>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                <Text style={styles.userName}>{echo.user?.fullName}</Text>
+
+                                                {echo.markedasFlag && (
+                                                    <>
+                                                        <Icon name="ellipse" size={6} color="#000" />
+                                                        <View style={styles.flagBox}>
+                                                            <Text style={styles.flagText}>FLAGGED</Text>
+                                                        </View>
+                                                    </>
+                                                )}
+                                            </View>
                                         </View>
                                     </TouchableOpacity>
 
@@ -267,7 +284,7 @@ const Profile = () => {
                                                     setEditingEchoId(null);
                                                     setEditedContent('');
                                                 }}
-                                                style={[styles.updateEcho, { backgroundColor: '#aaa' }]} // slightly different style for cancel
+                                                style={[styles.updateEcho, { backgroundColor: '#aaa' }]}
                                             >
                                                 <Text style={[styles.updateButtonText, { color: '#333' }]}>Cancel</Text>
                                             </TouchableOpacity>
@@ -961,6 +978,7 @@ const styles = StyleSheet.create({
     echoCard: {
         backgroundColor: '#fff',
         padding: 12,
+        paddingBottom: 30,
         borderRadius: 10,
         marginTop: 15,
         elevation: 1,
@@ -976,7 +994,7 @@ const styles = StyleSheet.create({
     echoContent: {
         fontSize: 15,
         color: '#444',
-        marginTop: 4,
+        marginTop: 5,
     },
     optionsModal: {
         backgroundColor: '#fff',
@@ -1018,6 +1036,21 @@ const styles = StyleSheet.create({
     },
     updateButtonText: {
         color: '#fff',
+        fontWeight: 'bold',
+    },
+    flagBox: {
+        backgroundColor: 'red',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        marginLeft: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    flagText: {
+        color: 'white',
+        fontSize: 10,
         fontWeight: 'bold',
     },
 });
