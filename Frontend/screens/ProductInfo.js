@@ -128,7 +128,7 @@ const ProductInfo = () => {
   };
   const formattedDate = createdAtDate.toLocaleDateString('en-IN', options); // Using 'en-IN' locale for India
 
-  const navigateToPayment = product => {
+  const navigateToPayment = (product,seller) => {
     navigation.navigate('Payment', { product ,seller });
   };
 
@@ -296,7 +296,7 @@ const ProductInfo = () => {
           {currentUserId &&
             currentUserId.toString() !== product?.seller?._id?.toString() &&
             product?.Status?.toLowerCase() !== 'sold' && (
-              <Pressable onPress={() => navigateToPayment(product)}>
+              <Pressable onPress={() => navigateToPayment(product,seller)}>
                 <View style={styles.btn}>
                   <FontAwesome name="handshake-o" size={30} color="white" />
                   <Text style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>
@@ -346,7 +346,7 @@ const ProductInfo = () => {
           {/* Display the formatted creation date */}
         </View>
       </ScrollView>
-      {currentUserId && currentUserId.toString() !== product?.seller?._id?.toString() && (
+      {currentUserId && currentUserId.toString() !== seller?._id?.toString() && (
         <View style={styles.footer}>
           <Pressable style={styles.footerButton} onPress={handleChatPress}>
             <Text style={styles.footerButtonText}>CHAT</Text>
