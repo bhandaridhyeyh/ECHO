@@ -46,10 +46,6 @@ const ProductInfo = () => {
   }, []);
 
   useEffect(() => {
-    console.log("ProductInfo received product:", product);
-  }, []);
-
-  useEffect(() => {
     const fetchSellerDetails = async () => {
       if (typeof product?.seller === 'string') {
         try {

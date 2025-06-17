@@ -19,7 +19,7 @@ const { width } = Dimensions.get('window');
 const Payment = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { product,seller } = route.params;
+  const { product, seller } = route.params;
 
   const dealId = `${product?._id?.slice(-8) || '84816554'}`;
   const productImageSource = product?.image
@@ -52,12 +52,21 @@ const Payment = () => {
                 return;
               }
 
-              const data = { sellerId: seller._id, buyerId: bid, postId: product._id };
-              if (!socket || !socket.connected) { 
-                socket.connect(); 
-                socket.emit("register", bid);
-                // Alert.alert('Error', 'You socket is not avaliable ');
-                // return;
+              // Immediately reflect UI change
+              setDealRequested(true);
+              setDealExpired(false);
+              setDealAccepted(false);
+              setTimer(300); // Start 5-minute countdown (300s)
+
+              const data = {
+                sellerId: seller._id,
+                buyerId: bid,
+                postId: product._id,
+              };
+
+              if (!socket || !socket.connected) {
+                socket.connect();
+                socket.emit('register', bid);
               }
 
               console.log('Emitting request-deal with data:', data);
@@ -67,23 +76,24 @@ const Payment = () => {
 
                 if (!response) {
                   Alert.alert('Error', 'No response from server');
+                  setDealRequested(false); // rollback
                   return;
                 }
 
                 if (response.error) {
                   Alert.alert('Error', response.error);
-                } else if (response.success) {
-                  setDealRequested(true);
-                  setDealExpired(false);
-                  setDealAccepted(false);
-                  setTimer(300)
-                } else {
+                  setDealRequested(false); // rollback
+                } else if (!response.success) {
                   Alert.alert('Error', 'Unexpected response from server');
+                  setDealRequested(false); // rollback
                 }
+
+                // If response.success, UI has already updated
               });
             } catch (err) {
               console.error('Error in handleRequestDeal:', err);
               Alert.alert('Error', 'An unexpected error occurred');
+              setDealRequested(false); // rollback
             }
           },
         },
@@ -126,6 +136,7 @@ const Payment = () => {
         setDealExpired(false);
         setTimer(0);
         Alert.alert('Deal Accepted', 'The seller has accepted your request.');
+        navigation.navigate('Main');
 
       } else if (deal.status === 'rejected') {
         setDealAccepted(false);
@@ -221,7 +232,7 @@ const Payment = () => {
 
       {dealAccepted && (
         <Text style={[styles.statusText, { color: 'green' }]}>
-          Deal Accepted! 🎉 Deal Completed.
+          Deal Accepted! <Icon name="happy-outline" size={20} color="green" /> Deal Completed.
         </Text>
       )}
 
