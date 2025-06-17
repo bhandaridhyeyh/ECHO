@@ -71,6 +71,9 @@ Don't forget to give the project a star! Thanks again!
 
 ## Appendix
 
+<h2>📱 Download ECHO App</h2>
+[Download APK](https://github.com/bhandaridhyeyh/ECHO/releases/download/v1.0.0/app-release.apk)
+
 For a quick demo, feel free to use the following credentials for **Login:**
 
 Email-1: dhyey.h.bhandari@nuv.ac.in
