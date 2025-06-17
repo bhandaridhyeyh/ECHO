@@ -54,7 +54,8 @@ const Payment = () => {
 
               const data = { sellerId: seller._id, buyerId: bid, postId: product._id };
               if (!socket || !socket.connected) { 
-                socket.connect();
+                socket.connect(); 
+                socket.emit("register", bid);
                 // Alert.alert('Error', 'You socket is not avaliable ');
                 // return;
               }

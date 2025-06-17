@@ -4,7 +4,8 @@ import Notification from "../models/notifications.models.js"
 const onlineusers = new Map();
 const socketHandler = (io) => {
     io.on('connection', (socket) => {
-        console.log("user id is :", socket.id)
+        console.log("user id is :", socket.id) 
+        console.log(onlineusers)
         socket.on('register', async (userId) => { 
             onlineusers.set(userId, socket.id)  // mapping userid to socket.id for online user to keep a track of which online user has which id !
             console.log(onlineusers)

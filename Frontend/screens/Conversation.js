@@ -46,7 +46,10 @@ export default function Conversation() {
   useEffect(() => {
     if (!userId || !receiverId) return;
 
-    if (!socket.connected) socket.connect();
+    if ( !socket || !socket.connected){
+      socket.connect()  
+      socket.emit("register", userId);
+    }; 
 
     socket.emit(
       'getChatHistory',

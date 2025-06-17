@@ -19,7 +19,8 @@ import Echoes from '../screens/Echoes';
 import Sell from '../screens/Sell';
 import Otp from '../screens/Otp';
 import OtherUser from '../screens/OtherUser';
-import AllPosts from '../screens/AllPosts';
+import AllPosts from '../screens/AllPosts'; 
+import socket from '../utilities/socket.js';
 
 // Import your getAccessToken function if you have one, else use AsyncStorage directly
 import { getAccessToken } from '../utilities/keychainUtils'; 
@@ -40,7 +41,11 @@ const StackNavigator = () => {
           setInitialRoute('Main');
         } else {
           setInitialRoute('Login');
-        }
+        } 
+        if ( !socket || !socket.connected){
+        socket.connect()  
+        socket.emit("register", userId);
+    }; 
       } catch (err) {
         console.error('Error checking login:', err);
         setInitialRoute('Login'); // fallback to Login on error
