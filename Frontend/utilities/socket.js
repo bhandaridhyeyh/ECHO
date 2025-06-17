@@ -4,7 +4,7 @@ import { API_URL } from '@env'
 const socket = io(`${API_URL}`, { 
     transports: ['websocket'], 
     autoConnect: false, 
-    reconnection: false,
+    reconnection: true,
 }) 
 
 export default socket

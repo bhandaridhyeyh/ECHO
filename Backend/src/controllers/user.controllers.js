@@ -256,7 +256,7 @@ const GetUserProfile = asyncHandler(async (req, res) => {
         select: 'fullName contactNumber course program ProfilePicture'
       }
     });
-
+  console.log(user)
   if (!user) {
     throw new apiError(404, "User not Found !")
   }

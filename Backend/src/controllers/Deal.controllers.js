@@ -10,8 +10,12 @@ async function handleRequestDeal(socket, io, data, callback = () => {}) {
         const post = await Sellpost.findById(postId); 
         if (!post) return callback({ error: "Post not Found!" }) 
         if (sellerId === buyerId) return callback({ error: "seller and buyer are same !" }) 
-        const existingDeal = await Deal.findOne({ sellerId, buyerId, postId }) 
-        if (existingDeal) return callback({ error: "Deal already Exists! " }) 
+        const existingDeal = await Deal.findOne({ sellerId, buyerId, postId })     
+        if (existingDeal) return callback({ error: "Deal already Exists! " })  
+        const receversocketid = onlineusers.get(sellerId) 
+        if(!receversocketid) {
+        return callback({ error: "Seller is not online. Please try again later." });
+        } 
         const deal = await Deal.create({ 
         postId: postId, 
         buyerId: buyerId, 
@@ -24,24 +28,7 @@ async function handleRequestDeal(socket, io, data, callback = () => {}) {
             select: "fullName" // Only fetch fullName field
         }); 
         if (!populatedDeal) return callback({ error: "Deal failed to created server error !" })
-        const receversocketid = onlineusers.get(sellerId) 
-        if (receversocketid) {  
-            io.to(receversocketid).emit("deal-request", populatedDeal);
-
-        } 
-        else { 
-            const notification = await Notification.create({ 
-            type: 'deal-request', 
-            from: buyerId, 
-            to: sellerId, 
-            message: `You have a new deal request from user ${buyerId}`,
-            data:populatedDeal
-        }) 
-        if (!notification) {  
-            throw new apiError(501,"Failed to genrate the Deal request !")
-        }
-        } 
-        return callback({ success: true, deal }); // goes back to the one who triggered it !!
+        io.to(receversocketid).emit("deal-request", populatedDeal);
     }
     catch (error) {
     console.error("Error in handleRequestDeal:", error);
@@ -61,18 +48,10 @@ async function handleResponseDeal(socket, io, data, callback = () => {}) {
         const deal = await Deal.findByIdAndUpdate(dealId, { status }, { new: true });
         if (!deal) return callback({ error: "Failed to update the deal" }); 
         const buyerSocketId = onlineusers.get(deal.buyerId.toString());  
-        if (buyerSocketId) {
-            io.to(buyerSocketId).emit("deal-response", deal); 
+        if (!buyerSocketId) {
+        return callback({ error: "Buyer is not online. Cannot respond to the deal." }); 
         }
-        else {
-            await Notification.create({
-                type: "deal-response",
-                from: deal.sellerId,
-                to: deal.buyerId,
-                message: `Your deal request has been ${status} by the seller.`,
-                data: deal,
-            });
-        }
+        io.to(buyerSocketId).emit("deal-response", deal);
         if (status === "accepted") {
             const post = await Sellpost.findByIdAndUpdate(deal.postId, { Status: "sold" }, { new: true });
             if (!post) return callback({ error: "Failed to update the post status" });

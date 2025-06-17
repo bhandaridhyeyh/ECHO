@@ -22,12 +22,13 @@ const CreatChat = asyncHandler(async (req, res) => {
 
   const participantsSorted = [participant_id1, participant_id2].sort();
   let chat = await Chat.findOne({ participants: participantsSorted });
-
+  console.log("foundone",chat)
   if (chat) {
     return res.status(200).json(new ApiResponse(200, chat, "Existing chat found."));
   }
 
   chat = await Chat.create({ participants: participantsSorted });
+  console.log("created one",chat)
   return res.status(201).json(new ApiResponse(201, chat, "Chat created successfully."));
 });
 

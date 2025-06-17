@@ -53,10 +53,10 @@ const Payment = () => {
               }
 
               const data = { sellerId: seller._id, buyerId: bid, postId: product._id };
-
-              if (!socket || !socket.connected) {
-                Alert.alert('Error', 'Seller is not online');
-                return;
+              if (!socket || !socket.connected) { 
+                socket.connect();
+                // Alert.alert('Error', 'You socket is not avaliable ');
+                // return;
               }
 
               console.log('Emitting request-deal with data:', data);

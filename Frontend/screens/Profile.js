@@ -1045,7 +1045,7 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         marginLeft: 4,
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'center'
     },
 
     flagText: {
