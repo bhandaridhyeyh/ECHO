@@ -43,7 +43,8 @@ const sendotp = asyncHandler(async (req, res) => {
   if (email === "" || password === "") {
     throw new apiError(404, "email or password or enrollmentId is empty !")
   }
-  if (!email.includes("@nuv.ac.in")) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
     throw new apiError(400, "give a proper email!");
   }
   const existed_user = await User.findOne({ email })
