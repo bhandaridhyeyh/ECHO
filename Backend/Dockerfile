@@ -7,4 +7,4 @@ RUN npm install
 
 COPY . . 
 
-CMD ["npx", "nodemon", "src/index.js"]
+CMD ["node", "src/index.js"]
