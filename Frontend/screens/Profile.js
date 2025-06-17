@@ -30,10 +30,10 @@ import { getAccessToken, deleteAccessToken } from '../utilities/keychainUtils';
 import socket from '../utilities/socket.js';
 
 const dummyProfileData = {
-    name: 'Rohan Sharma',
-    email: 'aryan.patel@navuni.edu.in',
-    degree: 'Bachelor of Technology in Computer Science and Engineering',
-    graduationYears: '2021-25',
+    name: 'Full Name',
+    email: 'name.surname@nuv.ac.in',
+    degree: 'B.Tech - CSE',
+    graduationYears: '2022-26',
     profileImageUrl: 'https://via.placeholder.com/150/DDDDDD/808080?text=RS',
 };
 

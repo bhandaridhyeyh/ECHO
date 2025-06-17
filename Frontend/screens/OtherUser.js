@@ -57,7 +57,6 @@ const OtherUser = () => {
     // Tab rendering logic
 
     const renderProductItem = ({ item }) => {
-        console.log("Rendering product item:", item); // 🔍 Log here
 
         return (
             <TouchableOpacity
@@ -227,10 +226,6 @@ const OtherUser = () => {
                 return null;
         }
     };
-
-    useEffect(() => {
-        console.log("userEchoes", userEchoes);
-    }, [userProducts, userEchoes]);
 
     useEffect(() => {
         if (userId) {

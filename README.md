@@ -4,7 +4,7 @@
 **ECHO** is an integrated platform designed to empower university students by streamlining communication and resource sharing within their university ecosystem.
 
 
-![Logo](Frontend/assets/images/logo.png)
+![Logo](Frontend/assets/images/TradeMateLogo.png)
 </div>
 
 ## Tech Stack
