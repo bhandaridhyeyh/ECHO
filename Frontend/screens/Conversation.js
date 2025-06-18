@@ -30,6 +30,11 @@ export default function Conversation() {
 
   const prompts = ['Hello!', 'Can we meet?', 'Discount?', 'Close deal?'];
 
+  const sortByTimestamp = (arr) =>
+    arr
+      .filter((msg) => msg.timestamp)
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
   useEffect(() => {
     (async () => {
       const id = await getCurrentUserId();
@@ -46,27 +51,29 @@ export default function Conversation() {
   useEffect(() => {
     if (!userId || !receiverId) return;
 
-    if ( !socket || !socket.connected){
-      socket.connect()  
+    if (!socket || !socket.connected) {
+      socket.connect();
       socket.emit("register", userId);
-    }; 
+    }
 
     socket.emit(
       'getChatHistory',
       { userId, receiverId },
       (chatHistory) => {
-        // This callback will receive chatHistory from the server
-        const formatted = chatHistory.messages.map((msg) => ({
-          id: msg._id,
-          text: msg.content,
-          sender: msg.sender._id === userId ? 'me' : 'other',
-          status: msg.status,
-          timestamp: msg.timestamp,
-        }));
-        setMessages(formatted);
-        scrollToBottom();
+        if (chatHistory?.messages?.length) {
+          const formatted = chatHistory.messages.map((msg) => ({
+            id: msg._id,
+            text: msg.content,
+            sender: msg.sender._id === userId ? 'me' : 'other',
+            status: msg.status,
+            timestamp: msg.timestamp,
+          }));
+          setMessages(sortByTimestamp(formatted));
+          scrollToBottom();
+        }
+      }
+    );
 
-      });
     const handleReceiveMessage = (message) => {
       const newMessage = {
         id: message._id,
@@ -75,14 +82,16 @@ export default function Conversation() {
         status: message.status,
         timestamp: message.timestamp,
       };
-      setMessages((prev) => [...prev, newMessage]);
+      setMessages((prev) => sortByTimestamp([...prev, newMessage]));
       scrollToBottom();
     };
 
     const handleStatusUpdate = (update) => {
       setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === update._id ? { ...msg, status: update.status } : msg
+        sortByTimestamp(
+          prev.map((msg) =>
+            msg.id === update._id ? { ...msg, status: update.status } : msg
+          )
         )
       );
     };
@@ -99,6 +108,7 @@ export default function Conversation() {
   const sendMessage = () => {
     const trimmed = inputMessage.trim();
     if (!trimmed || !userId || !receiverId) return;
+
     const tempId = Date.now().toString();
     const newMessage = {
       id: tempId,
@@ -108,7 +118,7 @@ export default function Conversation() {
       timestamp: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages((prev) => sortByTimestamp([...prev, newMessage]));
     setInputMessage('');
     scrollToBottom();
 
@@ -118,21 +128,22 @@ export default function Conversation() {
       (ackMessage) => {
         if (ackMessage?._id) {
           setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === tempId
-                ? {
-                  ...msg,
-                  id: ackMessage._id,
-                  status: ackMessage.status,
-                  timestamp: ackMessage.timestamp,
-                }
-                : msg
+            sortByTimestamp(
+              prev.map((msg) =>
+                msg.id === tempId
+                  ? {
+                      ...msg,
+                      id: ackMessage._id,
+                      status: ackMessage.status,
+                      timestamp: ackMessage.timestamp,
+                    }
+                  : msg
+              )
             )
           );
         }
       }
     );
-
   };
 
   const handlePromptClick = (prompt) => {
@@ -167,7 +178,6 @@ export default function Conversation() {
             })}
           </Text>
         )}
-
       </View>
     );
   };
@@ -184,20 +194,14 @@ export default function Conversation() {
             <Icon name="chevron-back-outline" size={30} color="black" />
           </Pressable>
           <TouchableOpacity onPress={() => navigation.navigate('OtherUser', { userId: receiverId })} style={styles.userInfo1}>
-
             <Image
               style={{ width: 40, height: 40, borderRadius: 20 }}
-              source={
-                receiverImage
-                  ? { uri: receiverImage }
-                  : require('../assets/images/user.png')
-              }
+              source={receiverImage ? { uri: receiverImage } : require('../assets/images/user.png')}
             />
             <View style={styles.userName}>
               <Text style={styles.userNameText}>{receiverName}</Text>
               <Text style={{ color: 'black' }}>{receiverDetails}</Text>
             </View>
-
           </TouchableOpacity>
           <Pressable onPress={makeCall}>
             <Icon name="call" size={30} color="black" />
@@ -214,21 +218,15 @@ export default function Conversation() {
         onContentSizeChange={scrollToBottom}
       />
 
-      {
-        showPrompts && (
-          <View style={styles.promptsContainer}>
-            {prompts.map((prompt, idx) => (
-              <Pressable
-                key={idx}
-                onPress={() => handlePromptClick(prompt)}
-                style={styles.prompt}
-              >
-                <Text style={styles.promptText}>{prompt}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )
-      }
+      {showPrompts && (
+        <View style={styles.promptsContainer}>
+          {prompts.map((prompt, idx) => (
+            <Pressable key={idx} onPress={() => handlePromptClick(prompt)} style={styles.prompt}>
+              <Text style={styles.promptText}>{prompt}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       <View style={styles.inputContainer}>
         <TextInput
@@ -245,7 +243,7 @@ export default function Conversation() {
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView >
+    </KeyboardAvoidingView>
   );
 }
 
