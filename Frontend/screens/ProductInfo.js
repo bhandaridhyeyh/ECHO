@@ -25,7 +25,7 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 const ProductInfo = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { product} = route.params; // Extract product from route parameters
+  const { product } = route.params; // Extract product from route parameters
   const { width: screenWidth } = useWindowDimensions();
   const [seller, setSeller] = useState(
     typeof product?.seller === 'object' ? product?.seller : null
@@ -93,11 +93,13 @@ const ProductInfo = () => {
       });
 
       console.log('Chat created:', response.data.data);
+      console.log(seller)
       navigation.navigate('Conversation', {
         chatId: response.data.data._id,
         receiverId: participant_id2,
         receiverName: seller?.fullName,
         receiverDetails: `${seller?.course} - ${seller?.program}`,
+        receiverContact: seller.contactNumber,
         receiverImage: typeof seller?.ProfilePicture === 'string' ? seller.ProfilePicture : null,
       });
     } catch (error) {
@@ -124,8 +126,8 @@ const ProductInfo = () => {
   };
   const formattedDate = createdAtDate.toLocaleDateString('en-IN', options); // Using 'en-IN' locale for India
 
-  const navigateToPayment = (product,seller) => {
-    navigation.navigate('Payment', { product ,seller });
+  const navigateToPayment = (product, seller) => {
+    navigation.navigate('Payment', { product, seller });
   };
 
   const makeCall = async () => {
@@ -292,7 +294,7 @@ const ProductInfo = () => {
           {currentUserId &&
             currentUserId.toString() !== product?.seller?._id?.toString() &&
             product?.Status?.toLowerCase() !== 'sold' && (
-              <Pressable onPress={() => navigateToPayment(product,seller)}>
+              <Pressable onPress={() => navigateToPayment(product, seller)}>
                 <View style={styles.btn}>
                   <FontAwesome name="handshake-o" size={30} color="white" />
                   <Text style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>
