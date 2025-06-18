@@ -1,54 +1,74 @@
-useEffect(() => {
-  if (!socket) return;
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Alert } from 'react-native';
+import StackNavigator from './navigation/StackNavigator';
+import socket from './utilities/socket';
 
-  const handleIncomingDealRequest = (deal) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+const App = () => {
+  const timeoutRef = useRef(null);
 
-    Alert.alert(
-      'New Deal Request',
-      `New Deal Request from ${deal.buyerId.fullName}`,
-      [
-        {
-          text: 'Accept',
-          onPress: () => {
-            clearTimeout(timeoutRef.current);
-            socket.emit('response-deal', {
-              dealId: deal._id,
-              status: 'accepted',
-            });
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleIncomingDealRequest = (deal) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+      Alert.alert(
+        'New Deal Request',
+        `New Deal Request from ${deal.buyerId.fullName}`,
+        [
+          {
+            text: 'Accept',
+            onPress: () => {
+              if (timeoutRef.current) clearTimeout(timeoutRef.current);
+              socket.emit('response-deal',{
+                dealId: deal._id,
+                status: 'accepted',
+              });
+            },
           },
-        },
-        {
-          text: 'Reject',
-          onPress: () => {
-            clearTimeout(timeoutRef.current);
-            socket.emit('response-deal', {
-              dealId: deal._id,
-              status: 'rejected',
-            }, (response) => {
-              console.log("Server responded to rejected deal:", response);
-            });
+          {
+            text: 'Reject',
+            onPress: () => {
+              if (timeoutRef.current) clearTimeout(timeoutRef.current);
+              socket.emit('response-deal', {
+                dealId: deal._id,
+                status: 'rejected',
+              },(response) => {
+              console.log("Server responded to accepted deal:", response);
+              });
+            },
+            style: 'destructive',
           },
-          style: 'destructive',
-        },
-      ],
-      { cancelable: false }
-    );
+        ],
+        { cancelable: false }
+      );
 
-    timeoutRef.current = setTimeout(() => {
-      socket.emit('response-deal', {
-        dealId: deal._id,
-        status: 'rejected',
-      }, (response) => {
-        console.log("Server auto-rejected deal after timeout:", response);
-      });
-    }, 5 * 60 * 1000);
-  };
+      timeoutRef.current = setTimeout(() => {
+        socket.emit('response-deal', {
+          dealId: deal._id,
+          status: 'rejected',
+        },(response) => {
+           console.log("Server responded to accepted deal:", response);
+        });
+      }, 5 * 60 * 1000);
+    };
 
-  socket.on('deal-request', handleIncomingDealRequest);
+    socket.on('deal-request', handleIncomingDealRequest);
 
-  return () => {
-    socket.off('deal-request', handleIncomingDealRequest);
-    clearTimeout(timeoutRef.current);
-  };
-}, []);
+    return () => {
+      socket.off('deal-request', handleIncomingDealRequest);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  return <StackNavigator />;
+};
+
+export default App;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+});

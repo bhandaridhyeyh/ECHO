@@ -218,7 +218,7 @@ export default function Conversation() {
         onContentSizeChange={scrollToBottom}
       />
 
-      {showPrompts && (
+      { messages.length === 0 && showPrompts && (
         <View style={styles.promptsContainer}>
           {prompts.map((prompt, idx) => (
             <Pressable key={idx} onPress={() => handlePromptClick(prompt)} style={styles.prompt}>

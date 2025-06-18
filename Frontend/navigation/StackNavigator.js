@@ -19,7 +19,8 @@ import Echoes from '../screens/Echoes';
 import Sell from '../screens/Sell';
 import Otp from '../screens/Otp';
 import OtherUser from '../screens/OtherUser';
-import AllPosts from '../screens/AllPosts'; 
+import AllPosts from '../screens/AllPosts';  
+import Completeregister from '../screens/Completeregister.js';
 import socket from '../utilities/socket.js';
 
 // Import your getAccessToken function if you have one, else use AsyncStorage directly
@@ -36,16 +37,16 @@ const StackNavigator = () => {
       try {
         const token = await getAccessToken(); // or use AsyncStorage.getItem('accessToken');
         const userId = await AsyncStorage.getItem('tradeMateUserId');
-
         if (token && userId) {
-          setInitialRoute('Main');
-        } else {
+            setInitialRoute('Main'); 
+            if ( !socket || !socket.connected){
+            socket.connect()  
+            socket.emit("register", userId);
+            }
+        } 
+        else {
           setInitialRoute('Login');
         } 
-        if ( !socket || !socket.connected){
-        socket.connect()  
-        socket.emit("register", userId);
-    }; 
       } catch (err) {
         console.error('Error checking login:', err);
         setInitialRoute('Login'); // fallback to Login on error
@@ -166,7 +167,8 @@ const StackNavigator = () => {
         <Stack.Screen name="Sell" component={Sell} options={{ headerShown: false }} />
         <Stack.Screen name="Payment" component={Payment} options={{ headerShown: false }} />
         <Stack.Screen name="Profile" component={Profile} options={{ headerShown: false }} />
-        <Stack.Screen name="OtherUser" component={OtherUser} options={{ headerShown: false }} />
+        <Stack.Screen name="OtherUser" component={OtherUser} options={{ headerShown: false }} /> 
+        <Stack.Screen name="Completeregister" component={Completeregister} options={{ headerShown: false }} />
         <Stack.Screen name="CompleteProfile" component={CompleteProfile} options={{ headerShown: false }} />
         <Stack.Screen name="Echoes" component={Echoes} options={{ headerShown: false }} />
       </Stack.Navigator>

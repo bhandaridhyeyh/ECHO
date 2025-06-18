@@ -27,7 +27,8 @@ const getAccessToken = async () => {
         return token; // Already a string
       }
     } else {
-      console.log('No access token found in keychain.');
+      console.log('No access token found in keychain.'); 
+      
       return null;
     }
   } catch (error) {

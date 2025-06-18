@@ -56,7 +56,7 @@ const Register = () => {
           'OTP Sent',
           'Please check your email for the verification code.',
         );
-        navigation.navigate('Otp', { email }); // Navigate to Otp.js, passing the email
+        navigation.navigate('Otp', { email ,password }); // Navigate to Otp.js, passing the email
       } else {
         Alert.alert(
           'Error',

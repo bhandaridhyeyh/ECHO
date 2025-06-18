@@ -13,6 +13,7 @@ const Otp = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const email = route.params?.email; // Get email from route parameters
+    const password = route.params?.password 
     const [otp, setOtp] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -55,7 +56,7 @@ const Otp = () => {
                         {
                             text: 'OK',
                             onPress: () => {
-                                navigation.navigate('Login'); // Navigate to login
+                                navigation.navigate('Completeregister', { email, password }); // Navigate to login
                             }
                         }
                     ],
