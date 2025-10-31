@@ -1,0 +1,18 @@
+# Node modules (installed inside Docker)
+node_modules
+npm-debug.log
+
+# Git files
+.git
+.gitignore
+
+# Docker files (don’t include Dockerfile or docker-compose)
+Dockerfile
+docker-compose.yml
+
+# Environment variables (secure!)
+.env
+
+# Optional: OS files
+.DS_Store
+*.log

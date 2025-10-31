@@ -1,0 +1,63 @@
+name: Simple CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout your code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup Node.js for backend
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      # 3️⃣ Install backend dependencies
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      # 4️⃣ Run backend tests
+      - name: Run backend tests
+        run: echo "No backend tests defined yet, skipping..."
+
+      # 5️⃣ Setup Java & Android SDK (for React Native Android build)
+      - name: Setup Java (for Gradle)
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 6️⃣ Install Frontend dependencies
+      - name: Install Frontend dependencies
+        run: |
+          cd Frontend
+          npm ci
+
+      # 7️⃣ Build Android Release APK
+      - name: Build Android APK
+        run: |
+          cd Frontend/android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+
+      # 8️⃣ Upload generated APK as artifact
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: Frontend/android/app/build/outputs/apk/release/app-release.apk
