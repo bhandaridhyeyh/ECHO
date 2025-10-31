@@ -11,6 +11,8 @@ import {
   Image,
   Pressable,
   Linking,
+  Keyboard,
+  Dimensions
 } from 'react-native';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -40,6 +42,16 @@ export default function Conversation() {
       const id = await getCurrentUserId();
       setUserId(id);
     })();
+  }, []);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      scrollToBottom();
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+    };
   }, []);
 
   const scrollToBottom = useCallback(() => {
@@ -132,11 +144,11 @@ export default function Conversation() {
               prev.map((msg) =>
                 msg.id === tempId
                   ? {
-                      ...msg,
-                      id: ackMessage._id,
-                      status: ackMessage.status,
-                      timestamp: ackMessage.timestamp,
-                    }
+                    ...msg,
+                    id: ackMessage._id,
+                    status: ackMessage.status,
+                    timestamp: ackMessage.timestamp,
+                  }
                   : msg
               )
             )
@@ -215,10 +227,11 @@ export default function Conversation() {
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         style={styles.chatList}
+        keyboardShouldPersistTaps="handled"
         onContentSizeChange={scrollToBottom}
       />
 
-      { messages.length === 0 && showPrompts && (
+      {messages.length === 0 && showPrompts && (
         <View style={styles.promptsContainer}>
           {prompts.map((prompt, idx) => (
             <Pressable key={idx} onPress={() => handlePromptClick(prompt)} style={styles.prompt}>
