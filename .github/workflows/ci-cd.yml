@@ -46,7 +46,12 @@ jobs:
         run: |
           cd Frontend
           npm ci
-
+      - name: Clean Metro cache
+        run: | 
+          cd Frontend
+          npx react-native start --reset-cache &
+          sleep 5
+          pkill node || true
       # 7️⃣ Build Android Release APK
       - name: Build Android APK
         run: |
