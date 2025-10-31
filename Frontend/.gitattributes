@@ -1,13 +1,15 @@
-# Always treat images as binary (no line ending conversion)
+# Always treat image files as binary
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.gif binary
 *.webp binary
+*.svg binary
 
-# Prevent CRLF normalization on binaries
+# Disable CRLF normalization for images
 *.png -text
 *.jpg -text
 *.jpeg -text
 *.gif -text
 *.webp -text
+*.svg -text
