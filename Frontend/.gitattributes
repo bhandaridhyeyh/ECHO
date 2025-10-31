@@ -1,3 +1,13 @@
+# Always treat images as binary (no line ending conversion)
 *.png binary
 *.jpg binary
 *.jpeg binary
+*.gif binary
+*.webp binary
+
+# Prevent CRLF normalization on binaries
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
