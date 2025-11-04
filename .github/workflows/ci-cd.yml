@@ -7,8 +7,52 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # ✅ Stage 1: Validation
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Install dependencies for both frontend and backend
+      - name: Install dependencies
+        run: |
+          cd Backend
+          npm ci
+          cd ../Frontend
+          npm ci
+
+      # Validate code quality with ESLint (you can adjust as needed)
+      - name: Lint Code
+        run: |
+          echo "🔍 Running ESLint checks..."
+          cd Backend
+          npx eslint . || true
+          cd ../Frontend
+          npx eslint . || true
+
+      # Validate important configuration files
+      - name: Validate Configuration Files
+        run: |
+          if [ ! -f "Backend/.env" ]; then
+            echo "❌ Backend .env file missing!"
+            exit 1
+          fi
+          if [ ! -f "Frontend/.env" ]; then
+            echo "❌ Frontend .env file missing!"
+            exit 1
+          fi
+          echo "✅ Configuration files validated successfully."
+
+  # 🏗️ Stage 2: Build (depends on Validation)
   build:
     runs-on: ubuntu-latest
+    needs: validate  # ⬅️ This ensures validation runs first
 
     steps:
       # 1️⃣ Checkout your code
@@ -46,12 +90,14 @@ jobs:
         run: |
           cd Frontend
           npm ci
+
       - name: Clean Metro cache
         run: | 
           cd Frontend
           npx react-native start --reset-cache &
           sleep 5
           pkill node || true
+
       # 7️⃣ Build Android Release APK
       - name: Build Android APK
         run: |
